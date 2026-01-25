@@ -268,3 +268,272 @@ body {
       inset 0 2px 4px rgba(255, 255, 255, 0.5);
   }
 }
+
+/* ========================================
+   画像表示画面
+   ======================================== */
+.image-display-content {
+  justify-content: flex-start;
+  padding-top: 40px;
+}
+
+/* 元画像コンテナ */
+.image-container {
+  width: 100%;
+  max-width: 350px;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  background: #FFF;
+  padding: 8px;
+}
+
+.base-image {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+}
+
+/* セクションタイトル */
+.section-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #FF6B9D;
+  margin-bottom: 20px;
+  text-shadow: 1px 1px 0 #FFF;
+}
+
+/* オプションフォーム */
+.options-form {
+  width: 100%;
+  max-width: 350px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 6px;
+  padding-left: 4px;
+}
+
+/* ドロップダウン */
+.form-select {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 2px solid #FFB6C1;
+  border-radius: 12px;
+  background: #FFF;
+  color: #333;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23FF6B9D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6,9 12,15 18,9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 20px;
+  transition: all 0.3s ease;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #FF6B9D;
+  box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.2);
+}
+
+/* テキストエリア */
+.form-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 2px solid #FFB6C1;
+  border-radius: 12px;
+  background: #FFF;
+  color: #333;
+  resize: none;
+  height: 80px;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #FF6B9D;
+  box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.2);
+}
+
+.form-textarea::placeholder {
+  color: #AAA;
+}
+
+/* 文字数カウント */
+.char-count {
+  text-align: right;
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+  padding-right: 4px;
+}
+
+/* 生成ボタン */
+.generate-button {
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #FFF;
+  background: linear-gradient(135deg, #7B68EE 0%, #9B89FF 50%, #7B68EE 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  margin-top: 8px;
+  box-shadow: 0 4px 15px rgba(123, 104, 238, 0.4);
+  transition: all 0.3s ease;
+}
+
+.generate-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(123, 104, 238, 0.5);
+}
+
+.generate-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.generate-button:disabled {
+  background: linear-gradient(135deg, #CCC 0%, #DDD 50%, #CCC 100%);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ========================================
+   ローディングオーバーレイ
+   ======================================== */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-overlay.active {
+  display: flex;
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid #FFE5EC;
+  border-top: 4px solid #FF6B9D;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #FF6B9D;
+}
+
+/* ========================================
+   結果画面
+   ======================================== */
+.result-content {
+  justify-content: flex-start;
+  padding-top: 40px;
+}
+
+.result-image-section {
+  width: 100%;
+  max-width: 350px;
+  margin-bottom: 20px;
+}
+
+.result-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #7B68EE;
+  margin-bottom: 8px;
+  text-align: left;
+  padding-left: 4px;
+}
+
+.result-image-container {
+  background: #FFF;
+  border-radius: 16px;
+  padding: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.result-image {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+}
+
+/* 結果画面のボタンエリア */
+.result-buttons {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 350px;
+  margin-top: 10px;
+}
+
+.back-button,
+.retry-button {
+  flex: 1;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-button {
+  background: #FFF;
+  color: #FF6B9D;
+  border: 2px solid #FF6B9D;
+}
+
+.back-button:hover {
+  background: #FFF0F5;
+}
+
+.retry-button {
+  background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 50%, #FFA0C0 100%);
+  color: #FFF;
+  box-shadow: 0 4px 15px rgba(255, 154, 158, 0.4);
+}
+
+.retry-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 154, 158, 0.5);
+}

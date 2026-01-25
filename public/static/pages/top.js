@@ -144,9 +144,8 @@ function setupStartButton(button) {
     
     setTimeout(() => {
       button.style.transform = '';
-      // TODO: 次の画面への遷移処理（別途指示待ち）
-      console.log('スタートボタンが押されました');
-      alert('次の画面は別途実装予定です！');
+      // 画像表示画面へ遷移
+      window.location.href = '/image-display';
     }, 150);
   });
 }
