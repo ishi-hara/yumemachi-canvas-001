@@ -3,8 +3,21 @@
  * Honoフレームワークを使用したCloudflare Pages用アプリケーション
  */
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+import generateApi from './api/generate'
 
-const app = new Hono()
+// 環境変数の型定義
+type Bindings = {
+  FAL_KEY: string
+}
+
+const app = new Hono<{ Bindings: Bindings }>()
+
+// CORS設定（API用）
+app.use('/api/*', cors())
+
+// 画像生成APIルート
+app.route('/api/generate', generateApi)
 
 /**
  * 共通HTMLヘッダー生成

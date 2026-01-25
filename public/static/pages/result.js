@@ -58,77 +58,54 @@ function getGenerationData() {
  * @param {Object|null} generationData - 生成データ
  */
 function displayGeneratedImage(imageElement, generationData) {
-  // 開発環境テスト用：生成画像URLが保存されていれば表示
+  // セッションストレージから生成画像URLを取得
   const generatedImageUrl = sessionStorage.getItem('generatedImageUrl');
 
   if (generatedImageUrl) {
     // 生成された画像がある場合
     imageElement.src = generatedImageUrl;
     imageElement.alt = '生成された画像';
+    
+    // 生成情報を表示
+    if (generationData) {
+      showGenerationInfo(generationData);
+    }
   } else {
-    // 開発テスト用：プレースホルダー表示
-    showPlaceholder(imageElement, generationData);
+    // 画像がない場合（エラー時など）
+    showErrorState(imageElement, generationData);
   }
 
   // 画像読み込みエラー時の処理
   imageElement.onerror = () => {
     console.error('画像の読み込みに失敗しました');
-    showPlaceholder(imageElement, generationData);
+    showErrorState(imageElement, generationData);
   };
 }
 
 /**
- * プレースホルダーを表示する（開発テスト用）
- * @param {HTMLImageElement} imageElement - 画像要素
- * @param {Object|null} generationData - 生成データ
- */
-function showPlaceholder(imageElement, generationData) {
-  // プレースホルダー画像として元画像を表示
-  imageElement.src = '/static/images/base-image.jpg';
-  imageElement.alt = '生成画像（テスト表示）';
-
-  // 生成データがあればコンソールに表示
-  if (generationData) {
-    console.log('=== 生成リクエスト情報 ===');
-    console.log('プロンプト:', generationData.prompt);
-    console.log('オプション:', generationData.options);
-    console.log('元画像URL:', generationData.baseImageUrl);
-    console.log('========================');
-
-    // 開発者向けにアラート表示
-    showDevInfo(generationData);
-  }
-}
-
-/**
- * 開発者向け情報を表示
+ * 生成情報を表示
  * @param {Object} generationData - 生成データ
  */
-function showDevInfo(generationData) {
+function showGenerationInfo(generationData) {
   // ページ上部に情報表示用の要素を追加
   const infoDiv = document.createElement('div');
-  infoDiv.className = 'dev-info';
+  infoDiv.className = 'generation-info';
   infoDiv.innerHTML = `
     <details>
-      <summary>🔧 開発テスト情報（クリックで展開）</summary>
-      <div class="dev-info-content">
-        <p><strong>プロンプト:</strong></p>
-        <code>${generationData.prompt}</code>
-        <p><strong>選択オプション:</strong></p>
-        <ul>
-          <li>スタイル: ${generationData.options.style}</li>
-          <li>ライティング: ${generationData.options.lighting}</li>
-          <li>構図: ${generationData.options.composition}</li>
-        </ul>
+      <summary>📝 生成条件（クリックで展開）</summary>
+      <div class="info-content">
         <p><strong>自由文:</strong> ${generationData.options.freeText}</p>
+        <p><strong>スタイル:</strong> ${generationData.options.style}</p>
+        <p><strong>ライティング:</strong> ${generationData.options.lighting}</p>
+        <p><strong>構図:</strong> ${generationData.options.composition}</p>
       </div>
     </details>
   `;
 
   // スタイル設定
   infoDiv.style.cssText = `
-    background: #FFF9E6;
-    border: 2px dashed #FFB347;
+    background: #F0F8FF;
+    border: 2px solid #87CEEB;
     border-radius: 12px;
     padding: 12px;
     margin: 0 auto 16px;
@@ -139,6 +116,50 @@ function showDevInfo(generationData) {
   // ページに挿入
   const mainContent = document.querySelector('.result-content');
   mainContent.insertBefore(infoDiv, mainContent.firstChild);
+}
+
+/**
+ * エラー状態を表示
+ * @param {HTMLImageElement} imageElement - 画像要素
+ * @param {Object|null} generationData - 生成データ
+ */
+function showErrorState(imageElement, generationData) {
+  // プレースホルダー画像として元画像を表示
+  imageElement.src = '/static/images/base-image.jpg';
+  imageElement.alt = '画像の生成に失敗しました';
+
+  // エラーメッセージを表示
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'error-message';
+  errorDiv.innerHTML = `
+    <p>⚠️ 画像の生成に失敗しました</p>
+    <p>もう一度お試しください</p>
+  `;
+
+  // スタイル設定
+  errorDiv.style.cssText = `
+    background: #FFF0F0;
+    border: 2px solid #FFB6C1;
+    border-radius: 12px;
+    padding: 12px;
+    margin: 0 auto 16px;
+    max-width: 350px;
+    font-size: 14px;
+    text-align: center;
+    color: #D32F2F;
+  `;
+
+  // ページに挿入
+  const mainContent = document.querySelector('.result-content');
+  mainContent.insertBefore(errorDiv, mainContent.firstChild);
+
+  // デバッグ情報をコンソールに表示
+  if (generationData) {
+    console.log('=== 生成リクエスト情報 ===');
+    console.log('プロンプト:', generationData.prompt);
+    console.log('オプション:', generationData.options);
+    console.log('========================');
+  }
 }
 
 // ========================================
@@ -161,7 +182,7 @@ function setupButtons(backButton, retryButton) {
 
   // もう一度生成ボタン：画像表示画面へ戻る
   retryButton.addEventListener('click', () => {
-    // 生成画像URLのみクリア（入力値は保持しない）
+    // 生成画像URLのみクリア
     sessionStorage.removeItem('generatedImageUrl');
     window.location.href = '/image-display';
   });
