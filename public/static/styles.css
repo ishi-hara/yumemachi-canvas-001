@@ -1,0 +1,270 @@
+/**
+ * ゆめまち☆キャンバス 共通スタイル
+ * かわいい・ポップなデザイン
+ */
+
+/* ========================================
+   リセット・基本設定
+   ======================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', sans-serif;
+  background: linear-gradient(135deg, #FFE5EC 0%, #E8F4FF 50%, #FFF4E5 100%);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ========================================
+   画面コンテナ
+   ======================================== */
+.screen-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 16px;
+}
+
+/* ========================================
+   画面名（右上表示）
+   ======================================== */
+.screen-name {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 12px;
+  color: #888;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+/* ========================================
+   メインコンテンツ
+   ======================================== */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+
+/* ========================================
+   タイトル
+   ======================================== */
+.title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #FF6B9D;
+  text-shadow: 
+    2px 2px 0 #FFD700,
+    -1px -1px 0 #FFF;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+  animation: titleBounce 2s ease-in-out infinite;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: #7B68EE;
+  font-weight: 500;
+  margin-bottom: 48px;
+}
+
+/* タイトルのふわふわアニメーション */
+@keyframes titleBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* ========================================
+   クラッカーアニメーション
+   ======================================== */
+.cracker-container {
+  position: absolute;
+  top: 30%;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.cracker {
+  position: absolute;
+  font-size: 48px;
+  opacity: 0;
+  transition: all 0.1s;
+}
+
+.cracker-left {
+  left: 10%;
+  transform: rotate(-30deg);
+}
+
+.cracker-right {
+  right: 10%;
+  transform: rotate(30deg) scaleX(-1);
+}
+
+/* クラッカーが開くアニメーション */
+.cracker.pop {
+  animation: crackerPop 0.8s ease-out forwards;
+}
+
+@keyframes crackerPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-30deg);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.3) rotate(-15deg);
+  }
+  50% {
+    transform: scale(1) rotate(-30deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-30deg);
+  }
+}
+
+.cracker-right.pop {
+  animation: crackerPopRight 0.8s ease-out forwards;
+}
+
+@keyframes crackerPopRight {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(30deg) scaleX(-1);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.3) rotate(15deg) scaleX(-1);
+  }
+  50% {
+    transform: scale(1) rotate(30deg) scaleX(-1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(30deg) scaleX(-1);
+  }
+}
+
+/* ========================================
+   紙吹雪
+   ======================================== */
+.confetti-container {
+  position: absolute;
+  top: 25%;
+  left: 0;
+  right: 0;
+  height: 200px;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+}
+
+/* 紙吹雪が飛ぶアニメーション */
+@keyframes confettiFall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(150px) rotate(720deg);
+  }
+}
+
+/* ========================================
+   スタートボタン
+   ======================================== */
+.start-button {
+  background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 50%, #FFA0C0 100%);
+  border: none;
+  border-radius: 50px;
+  padding: 18px 60px;
+  font-size: 20px;
+  font-weight: bold;
+  color: #FFF;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  box-shadow: 
+    0 6px 20px rgba(255, 154, 158, 0.4),
+    0 3px 6px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.start-button::before {
+  content: '✨';
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.start-button::after {
+  content: '✨';
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.start-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 
+    0 8px 25px rgba(255, 154, 158, 0.5),
+    0 5px 10px rgba(0, 0, 0, 0.15),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+.start-button:active {
+  transform: translateY(0);
+  box-shadow: 
+    0 4px 15px rgba(255, 154, 158, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+/* ボタンのキラキラアニメーション */
+.start-button {
+  animation: buttonGlow 2s ease-in-out infinite;
+}
+
+@keyframes buttonGlow {
+  0%, 100% {
+    box-shadow: 
+      0 6px 20px rgba(255, 154, 158, 0.4),
+      0 3px 6px rgba(0, 0, 0, 0.1),
+      inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow: 
+      0 6px 30px rgba(255, 154, 158, 0.6),
+      0 3px 6px rgba(0, 0, 0, 0.1),
+      inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  }
+}
