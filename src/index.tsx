@@ -86,9 +86,9 @@ app.get('/', (c) => {
 /**
  * 画像表示画面
  * - 元画像表示
- * - スタイル/ライティングの選択（構図は「全体像」で固定）
  * - 自由文入力
  * - 生成ボタン
+ * ※ スタイル/ライティング/構図は固定（写真風/自然光/全体像）
  */
 app.get('/image-display', (c) => {
   return c.html(`
@@ -109,30 +109,6 @@ app.get('/image-display', (c) => {
         
         <!-- オプション選択フォーム -->
         <form class="options-form" id="optionsForm">
-          <!-- スタイル（valueは日本語、JSでマッピング） -->
-          <div class="form-group">
-            <label for="styleSelect" class="form-label">スタイル</label>
-            <select id="styleSelect" class="form-select">
-              <option value="写真風" selected>写真風</option>
-              <option value="アニメ風">アニメ風</option>
-              <option value="油絵風">油絵風</option>
-              <option value="水彩画風">水彩画風</option>
-              <option value="デジタルアート">デジタルアート</option>
-            </select>
-          </div>
-          
-          <!-- ライティング（valueは日本語、JSでマッピング） -->
-          <div class="form-group">
-            <label for="lightingSelect" class="form-label">ライティング</label>
-            <select id="lightingSelect" class="form-select">
-              <option value="自然光" selected>自然光</option>
-              <option value="スタジオライト">スタジオライト</option>
-              <option value="ドラマチック">ドラマチック</option>
-              <option value="柔らかい光">柔らかい光</option>
-              <option value="逆光">逆光</option>
-            </select>
-          </div>
-          
           <!-- 自由文入力 -->
           <div class="form-group">
             <label for="freeText" class="form-label">自由文（100文字以内、必須）</label>

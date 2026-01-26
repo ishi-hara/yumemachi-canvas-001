@@ -1,13 +1,20 @@
 /**
  * 画像表示画面用JavaScript
- * - スタイル/ライティングのマッピングテーブル
- * - パラメータ自動決定（strength/steps/guidance）
- * - プロンプト構築
+ * - 自由文入力バリデーション
+ * - プロンプト構築（スタイル/ライティング/構図は固定）
  * - fal.ai API呼び出し
+ * 
+ * 固定パラメータ:
+ * - スタイル: 写真風
+ * - ライティング: 自然光
+ * - 構図: 全体像
+ * - strength: 0.52
+ * - steps: 35
+ * - guidance: 7.0
  */
 
 // ========================================
-// 定数定義
+// 定数定義（すべて固定）
 // ========================================
 
 // 元画像のパス
@@ -16,162 +23,30 @@ const BASE_IMAGE_PATH = '/static/images/base-image.jpg';
 // シーンベース（固定：駅前ロータリー用）
 const SCENE_BASE = 'In an existing station-front urban plaza and rotary';
 
+// スタイル（固定：写真風）
+const STYLE_TAG = 'photorealistic, professional photography, high resolution';
+
+// ライティング（固定：自然光）
+const LIGHTING_TAG = 'natural lighting, daylight';
+
 // 構図（固定：全体像）
-const COMPOSITION_FIXED = 'full body shot, wide angle';
+const COMPOSITION_TAG = 'full body shot, wide angle';
 
-// ========================================
-// マッピングテーブル
-// ========================================
-
-/**
- * スタイル → 英語タグ
- */
-const STYLE_MAP = {
-  "写真風": "photorealistic, professional photography, high resolution",
-  "アニメ風": "anime style, vibrant colors, clean lineart",
-  "油絵風": "oil painting, canvas texture, fine art",
-  "水彩画風": "watercolor painting, soft edges, pastel tones",
-  "デジタルアート": "digital art, highly detailed, concept art",
+// fal.aiパラメータ（固定）
+const FAL_PARAMS = {
+  strength: 0.52,
+  steps: 35,
+  guidance: 7.0
 };
 
-/**
- * ライティング → 英語タグ
- */
-const LIGHTING_MAP = {
-  "自然光": "natural lighting, daylight",
-  "スタジオライト": "studio lighting, professional, soft shadows",
-  "ドラマチック": "dramatic lighting, high contrast, cinematic lighting",
-  "柔らかい光": "soft lighting, diffused light, gentle shadows",
-  "逆光": "backlit, rim lighting, glowing edges",
-};
-
-/**
- * パラメータ表（スタイル × ライティング）
- * strength: 元画像からの変更度合い（低いほど元画像を維持）
- * steps: 推論ステップ数（多いほど高品質）
- * guidance: プロンプトへの忠実度（高いほどプロンプトに従う）
- */
-const PARAM_TABLE = {
-  "写真風": {
-    "自然光":         { strength: 0.40, steps: 35, guidance: 7.0 },
-    "柔らかい光":     { strength: 0.38, steps: 35, guidance: 6.8 },
-    "スタジオライト": { strength: 0.42, steps: 38, guidance: 7.8 },
-    "ドラマチック":   { strength: 0.43, steps: 38, guidance: 7.6 },
-    "逆光":           { strength: 0.40, steps: 35, guidance: 6.6 },
-  },
-  "アニメ風": {
-    "自然光":         { strength: 0.65, steps: 45, guidance: 8.3 },
-    "柔らかい光":     { strength: 0.65, steps: 45, guidance: 8.0 },
-    "スタジオライト": { strength: 0.67, steps: 48, guidance: 8.6 },
-    "ドラマチック":   { strength: 0.68, steps: 48, guidance: 8.7 },
-    "逆光":           { strength: 0.66, steps: 46, guidance: 8.1 },
-  },
-  "油絵風": {
-    "自然光":         { strength: 0.70, steps: 50, guidance: 8.2 },
-    "柔らかい光":     { strength: 0.70, steps: 50, guidance: 8.0 },
-    "スタジオライト": { strength: 0.72, steps: 52, guidance: 8.5 },
-    "ドラマチック":   { strength: 0.73, steps: 52, guidance: 8.6 },
-    "逆光":           { strength: 0.71, steps: 50, guidance: 8.1 },
-  },
-  "水彩画風": {
-    "自然光":         { strength: 0.75, steps: 50, guidance: 7.8 },
-    "柔らかい光":     { strength: 0.75, steps: 50, guidance: 7.6 },
-    "スタジオライト": { strength: 0.77, steps: 52, guidance: 8.2 },
-    "ドラマチック":   { strength: 0.78, steps: 52, guidance: 8.3 },
-    "逆光":           { strength: 0.76, steps: 50, guidance: 7.6 },
-  },
-  "デジタルアート": {
-    "自然光":         { strength: 0.68, steps: 48, guidance: 8.4 },
-    "柔らかい光":     { strength: 0.68, steps: 48, guidance: 8.1 },
-    "スタジオライト": { strength: 0.70, steps: 50, guidance: 8.7 },
-    "ドラマチック":   { strength: 0.71, steps: 50, guidance: 8.8 },
-    "逆光":           { strength: 0.69, steps: 48, guidance: 8.1 },
-  },
-};
-
-/**
- * ネガティブプロンプト（スタイル別）
- * 不要な要素を除外するためのプロンプト
- */
-const NEGATIVE_MAP = {
-  "写真風": [
-    "cartoon, anime, illustration, painting, 3d render",
-    "low quality, blurry, noise, jpeg artifacts",
-    "distorted face, deformed hands, extra limbs, bad anatomy",
-    "text, watermark, logo, signage, subtitles",
-    "overexposed, underexposed, unnatural colors"
-  ].join(", "),
-  "アニメ風": [
-    "low quality, blurry, noise",
-    "distorted face, deformed hands, extra limbs, bad anatomy",
-    "text, watermark, logo"
-  ].join(", "),
-  "油絵風": [
-    "low quality, blurry, noise",
-    "distorted face, deformed hands, extra limbs, bad anatomy",
-    "text, watermark, logo"
-  ].join(", "),
-  "水彩画風": [
-    "low quality, blurry, noise",
-    "muddy colors, dirty wash",
-    "distorted face, deformed hands, extra limbs, bad anatomy",
-    "text, watermark, logo"
-  ].join(", "),
-  "デジタルアート": [
-    "low quality, blurry, noise",
-    "distorted face, deformed hands, extra limbs, bad anatomy",
-    "text, watermark, logo"
-  ].join(", "),
-};
-
-// ========================================
-// パラメータ取得関数
-// ========================================
-
-/**
- * スタイルとライティングからfal.aiパラメータを取得
- * @param {string} style - スタイル（日本語）
- * @param {string} lighting - ライティング（日本語）
- * @returns {Object} { strength, steps, guidance }
- */
-function getFalParams(style, lighting) {
-  const styleParams = PARAM_TABLE[style] || PARAM_TABLE["写真風"];
-  return styleParams[lighting] || styleParams["自然光"];
-}
-
-/**
- * ネガティブプロンプトを取得
- * @param {string} style - スタイル（日本語）
- * @returns {string} ネガティブプロンプト
- */
-function getNegativePrompt(style) {
-  return NEGATIVE_MAP[style] || NEGATIVE_MAP["写真風"];
-}
-
-/**
- * 安全ガードを適用
- * - 逆光: guidanceを抑え気味に（白飛び防止）
- * - ドラマチック: stepsを少し抑える（コントラスト過剰防止）
- * @param {string} style - スタイル
- * @param {string} lighting - ライティング
- * @param {Object} params - パラメータ
- * @returns {Object} 調整後のパラメータ
- */
-function applySafetyTweaks(style, lighting, params) {
-  const p = { ...params };
-
-  // 逆光は白飛びしやすい → guidanceを抑え気味に
-  if (lighting === "逆光") {
-    p.guidance = Math.min(p.guidance, style === "写真風" ? 6.8 : 8.2);
-  }
-
-  // ドラマチックはコントラスト過剰になりやすい → steps少し抑える
-  if (lighting === "ドラマチック") {
-    p.steps = Math.max(30, p.steps - 2);
-  }
-
-  return p;
-}
+// ネガティブプロンプト（写真風用）
+const NEGATIVE_PROMPT = [
+  "cartoon, anime, illustration, painting, 3d render",
+  "low quality, blurry, noise, jpeg artifacts",
+  "distorted face, deformed hands, extra limbs, bad anatomy",
+  "text, watermark, logo, signage, subtitles",
+  "overexposed, underexposed, unnatural colors"
+].join(", ");
 
 // ========================================
 // プロンプト構築
@@ -180,22 +55,16 @@ function applySafetyTweaks(style, lighting, params) {
 /**
  * プロンプトを構築する
  * @param {string} freeText - 自由文（日本語）
- * @param {string} style - スタイル（日本語）
- * @param {string} lighting - ライティング（日本語）
  * @returns {string} 構築されたプロンプト
  */
-function buildPrompt(freeText, style, lighting) {
-  // 英語タグを取得
-  const styleTag = STYLE_MAP[style] || STYLE_MAP["写真風"];
-  const lightTag = LIGHTING_MAP[lighting] || LIGHTING_MAP["自然光"];
-
+function buildPrompt(freeText) {
   // プロンプト構築
   // 【制御用】英語 + 【意味追加】日本語（自由文）
   const parts = [
     SCENE_BASE,
-    styleTag,
-    lightTag,
-    COMPOSITION_FIXED,
+    STYLE_TAG,
+    LIGHTING_TAG,
+    COMPOSITION_TAG,
     '',  // 空行で区切り
     freeText  // 日本語自由文
   ];
@@ -210,8 +79,6 @@ function buildPrompt(freeText, style, lighting) {
 document.addEventListener('DOMContentLoaded', () => {
   // フォーム要素の取得
   const form = document.getElementById('optionsForm');
-  const styleSelect = document.getElementById('styleSelect');
-  const lightingSelect = document.getElementById('lightingSelect');
   const freeText = document.getElementById('freeText');
   const charCount = document.getElementById('charCount');
   const generateButton = document.getElementById('generateButton');
@@ -225,8 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     handleGenerate(
-      styleSelect,
-      lightingSelect,
       freeText,
       loadingOverlay,
       generateButton,
@@ -295,34 +160,24 @@ function imageToBase64(img) {
  * 生成ボタン押下時の処理
  */
 async function handleGenerate(
-  styleSelect,
-  lightingSelect,
   freeText,
   loadingOverlay,
   generateButton,
   baseImage
 ) {
-  // 選択値を取得
-  const style = styleSelect.value;
-  const lighting = lightingSelect.value;
+  // 自由文を取得
   const freeTextValue = freeText.value.trim();
 
   // プロンプトを構築
-  const prompt = buildPrompt(freeTextValue, style, lighting);
-
-  // パラメータを取得（安全ガード適用）
-  const baseParams = getFalParams(style, lighting);
-  const params = applySafetyTweaks(style, lighting, baseParams);
-
-  // ネガティブプロンプトを取得
-  const negativePrompt = getNegativePrompt(style);
+  const prompt = buildPrompt(freeTextValue);
 
   console.log('=== 画像生成パラメータ ===');
-  console.log('スタイル:', style);
-  console.log('ライティング:', lighting);
+  console.log('スタイル: 写真風（固定）');
+  console.log('ライティング: 自然光（固定）');
+  console.log('構図: 全体像（固定）');
   console.log('プロンプト:', prompt);
-  console.log('ネガティブプロンプト:', negativePrompt);
-  console.log('パラメータ:', params);
+  console.log('ネガティブプロンプト:', NEGATIVE_PROMPT);
+  console.log('パラメータ:', FAL_PARAMS);
 
   // ボタンを無効化
   generateButton.disabled = true;
@@ -333,13 +188,13 @@ async function handleGenerate(
   // 生成データをセッションストレージに保存
   const generationData = {
     prompt: prompt,
-    negativePrompt: negativePrompt,
+    negativePrompt: NEGATIVE_PROMPT,
     baseImageUrl: BASE_IMAGE_PATH,
-    params: params,
+    params: FAL_PARAMS,
     options: {
-      style: style,
-      lighting: lighting,
-      composition: '全体像',  // 固定値
+      style: '写真風',
+      lighting: '自然光',
+      composition: '全体像',
       freeText: freeTextValue
     }
   };
@@ -358,11 +213,11 @@ async function handleGenerate(
       },
       body: JSON.stringify({
         prompt: prompt,
-        negativePrompt: negativePrompt,
+        negativePrompt: NEGATIVE_PROMPT,
         imageData: imageData,
-        strength: params.strength,
-        steps: params.steps,
-        guidance: params.guidance
+        strength: FAL_PARAMS.strength,
+        steps: FAL_PARAMS.steps,
+        guidance: FAL_PARAMS.guidance
       })
     });
 
