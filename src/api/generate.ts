@@ -1,6 +1,12 @@
 /**
  * 画像生成APIエンドポイント
  * fal.aiを使用してImage-to-Image変換を行う
+ * 
+ * パラメータはフロントエンドで計算され、APIに渡される
+ * - strength: 元画像からの変更度合い
+ * - steps: 推論ステップ数
+ * - guidance: プロンプトへの忠実度
+ * - negativePrompt: 除外したい要素
  */
 import { Hono } from 'hono'
 import { fal } from '@fal-ai/client'
@@ -10,6 +16,16 @@ type Bindings = {
   FAL_KEY: string
 }
 
+// リクエストボディの型定義
+interface GenerateRequest {
+  prompt: string
+  imageData: string
+  negativePrompt?: string
+  strength?: number
+  steps?: number
+  guidance?: number
+}
+
 const generateApi = new Hono<{ Bindings: Bindings }>()
 
 /**
@@ -17,14 +33,25 @@ const generateApi = new Hono<{ Bindings: Bindings }>()
  * POST /api/generate
  * 
  * リクエストボディ:
- * - prompt: 生成プロンプト
- * - imageData: 元画像のBase64データ
+ * - prompt: 生成プロンプト（必須）
+ * - imageData: 元画像のBase64データ（必須）
+ * - negativePrompt: ネガティブプロンプト（任意）
+ * - strength: 元画像からの変更度合い（任意、デフォルト0.40）
+ * - steps: 推論ステップ数（任意、デフォルト35）
+ * - guidance: プロンプトへの忠実度（任意、デフォルト7.0）
  */
 generateApi.post('/', async (c) => {
   try {
     // リクエストボディを取得
-    const body = await c.req.json()
-    const { prompt, imageData } = body
+    const body: GenerateRequest = await c.req.json()
+    const { 
+      prompt, 
+      imageData, 
+      negativePrompt,
+      strength = 0.40,
+      steps = 35,
+      guidance = 7.0
+    } = body
 
     // バリデーション
     if (!prompt) {
@@ -64,28 +91,35 @@ generateApi.post('/', async (c) => {
     const blob = new Blob([bytes], { type: 'image/jpeg' })
     const targetImageUrl = await fal.storage.upload(blob)
     
-    console.log('画像をfal.aiにアップロード:', targetImageUrl)
+    console.log('=== fal.ai 画像生成開始 ===')
+    console.log('画像URL:', targetImageUrl)
+    console.log('プロンプト:', prompt)
+    console.log('ネガティブプロンプト:', negativePrompt || 'なし')
+    console.log('パラメータ:', { strength, steps, guidance })
 
-    // プロンプトを改善：元画像の変更を明示的に指示
-    const enhancedPrompt = `Transform this image: ${prompt}. Keep the same location and architecture, add the requested elements while maintaining the original scene composition.`
+    // fal.ai API入力パラメータを構築
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const falInput: Record<string, any> = {
+      image_url: targetImageUrl,
+      prompt: prompt,
+      strength: strength,
+      num_inference_steps: steps,
+      guidance_scale: guidance,
+      num_images: 1,
+      enable_safety_checker: true,
+      output_format: 'jpeg'
+    }
 
-    console.log('画像生成開始')
-    console.log('元プロンプト:', prompt)
-    console.log('拡張プロンプト:', enhancedPrompt)
+    // ネガティブプロンプトがあれば追加
+    // ※ fal-ai/flux/dev/image-to-image が対応していない場合はエラーになる可能性あり
+    // その場合は削除が必要
+    if (negativePrompt) {
+      falInput.negative_prompt = negativePrompt
+    }
 
     // fal.ai Flux Image-to-Image APIを呼び出し
-    // strength を下げて元画像の構造を保持
     const result = await fal.subscribe('fal-ai/flux/dev/image-to-image', {
-      input: {
-        image_url: targetImageUrl,
-        prompt: enhancedPrompt,
-        strength: 0.55,              // 元画像を55%保持、45%を変更
-        num_inference_steps: 40,     // 推論ステップ数
-        guidance_scale: 7.5,         // プロンプトへの忠実度を上げる
-        num_images: 1,
-        enable_safety_checker: true,
-        output_format: 'jpeg'
-      },
+      input: falInput,
       logs: true,
       onQueueUpdate: (update) => {
         if (update.status === 'IN_PROGRESS') {
@@ -94,14 +128,15 @@ generateApi.post('/', async (c) => {
       }
     })
 
-    console.log('画像生成完了')
+    console.log('=== 画像生成完了 ===')
 
     // 生成された画像URLを返す
     if (result.data && result.data.images && result.data.images.length > 0) {
       return c.json({
         success: true,
         imageUrl: result.data.images[0].url,
-        prompt: prompt
+        prompt: prompt,
+        params: { strength, steps, guidance }
       })
     } else {
       return c.json({
@@ -121,6 +156,12 @@ generateApi.post('/', async (c) => {
       const errorObj = error as Record<string, unknown>
       if (errorObj.body) {
         console.error('fal.ai エラー詳細:', errorObj.body)
+        
+        // ネガティブプロンプトが原因のエラーかチェック
+        const bodyStr = JSON.stringify(errorObj.body)
+        if (bodyStr.includes('negative_prompt')) {
+          console.warn('注意: negative_prompt がサポートされていない可能性があります')
+        }
       }
     }
     

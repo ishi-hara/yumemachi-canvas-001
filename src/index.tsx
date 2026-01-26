@@ -109,27 +109,27 @@ app.get('/image-display', (c) => {
         
         <!-- オプション選択フォーム -->
         <form class="options-form" id="optionsForm">
-          <!-- スタイル -->
+          <!-- スタイル（valueは日本語、JSでマッピング） -->
           <div class="form-group">
             <label for="styleSelect" class="form-label">スタイル</label>
             <select id="styleSelect" class="form-select">
-              <option value="photorealistic, professional photography" selected>写真風</option>
-              <option value="anime style, vibrant colors">アニメ風</option>
-              <option value="oil painting, canvas texture">油絵風</option>
-              <option value="watercolor, soft edges">水彩画風</option>
-              <option value="digital art, highly detailed">デジタルアート</option>
+              <option value="写真風" selected>写真風</option>
+              <option value="アニメ風">アニメ風</option>
+              <option value="油絵風">油絵風</option>
+              <option value="水彩画風">水彩画風</option>
+              <option value="デジタルアート">デジタルアート</option>
             </select>
           </div>
           
-          <!-- ライティング -->
+          <!-- ライティング（valueは日本語、JSでマッピング） -->
           <div class="form-group">
             <label for="lightingSelect" class="form-label">ライティング</label>
             <select id="lightingSelect" class="form-select">
-              <option value="natural lighting" selected>自然光</option>
-              <option value="studio lighting, professional">スタジオライト</option>
-              <option value="dramatic lighting, high contrast">ドラマチック</option>
-              <option value="soft lighting, diffused">柔らかい光</option>
-              <option value="backlit, rim lighting">逆光</option>
+              <option value="自然光" selected>自然光</option>
+              <option value="スタジオライト">スタジオライト</option>
+              <option value="ドラマチック">ドラマチック</option>
+              <option value="柔らかい光">柔らかい光</option>
+              <option value="逆光">逆光</option>
             </select>
           </div>
           
