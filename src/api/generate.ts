@@ -12,90 +12,32 @@ type Bindings = {
 
 const generateApi = new Hono<{ Bindings: Bindings }>()
 
-// 元画像のURL（fal.aiからアクセス可能な公開URL）
-// 注意: このURLはfal.aiがダウンロードできる公開URLである必要があります
-let uploadedImageUrl: string | null = null
-
-/**
- * 画像アップロードエンドポイント
- * POST /api/generate/upload
- * 
- * ベース画像をfal.aiにアップロードしてURLを取得
- */
-generateApi.post('/upload', async (c) => {
-  try {
-    const falKey = c.env.FAL_KEY
-    if (!falKey) {
-      return c.json({ 
-        success: false, 
-        error: 'APIキーが設定されていません' 
-      }, 500)
-    }
-
-    fal.config({
-      credentials: falKey
-    })
-
-    // リクエストボディからBase64画像データを取得
-    const body = await c.req.json()
-    const { imageData } = body
-
-    if (!imageData) {
-      return c.json({
-        success: false,
-        error: '画像データが必要です'
-      }, 400)
-    }
-
-    // Base64データをBlobに変換
-    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '')
-    const binaryData = atob(base64Data)
-    const bytes = new Uint8Array(binaryData.length)
-    for (let i = 0; i < binaryData.length; i++) {
-      bytes[i] = binaryData.charCodeAt(i)
-    }
-    const blob = new Blob([bytes], { type: 'image/jpeg' })
-
-    // fal.aiにアップロード
-    const url = await fal.storage.upload(blob)
-    uploadedImageUrl = url
-
-    console.log('画像アップロード完了:', url)
-
-    return c.json({
-      success: true,
-      imageUrl: url
-    })
-
-  } catch (error) {
-    console.error('画像アップロードエラー:', error)
-    const errorMessage = error instanceof Error ? error.message : '不明なエラー'
-    return c.json({
-      success: false,
-      error: `画像アップロード中にエラーが発生しました: ${errorMessage}`
-    }, 500)
-  }
-})
-
 /**
  * 画像生成エンドポイント
  * POST /api/generate
  * 
  * リクエストボディ:
  * - prompt: 生成プロンプト
- * - imageUrl: 元画像のURL（fal.aiアップロード済みURL、またはBase64）
+ * - imageData: 元画像のBase64データ
  */
 generateApi.post('/', async (c) => {
   try {
     // リクエストボディを取得
     const body = await c.req.json()
-    const { prompt, imageUrl, imageData } = body
+    const { prompt, imageData } = body
 
     // バリデーション
     if (!prompt) {
       return c.json({ 
         success: false, 
         error: 'プロンプトは必須です' 
+      }, 400)
+    }
+
+    if (!imageData) {
+      return c.json({ 
+        success: false, 
+        error: '画像データは必須です' 
       }, 400)
     }
 
@@ -112,42 +54,34 @@ generateApi.post('/', async (c) => {
       credentials: falKey
     })
 
-    console.log('画像生成開始:', { prompt })
-
-    // 使用する画像URLを決定
-    let targetImageUrl: string
-
-    if (imageData) {
-      // Base64データがある場合はアップロード
-      const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '')
-      const binaryData = atob(base64Data)
-      const bytes = new Uint8Array(binaryData.length)
-      for (let i = 0; i < binaryData.length; i++) {
-        bytes[i] = binaryData.charCodeAt(i)
-      }
-      const blob = new Blob([bytes], { type: 'image/jpeg' })
-      targetImageUrl = await fal.storage.upload(blob)
-      console.log('画像をfal.aiにアップロード:', targetImageUrl)
-    } else if (imageUrl && imageUrl.startsWith('https://fal.media')) {
-      // 既にfal.aiにアップロード済みのURL
-      targetImageUrl = imageUrl
-    } else if (uploadedImageUrl) {
-      // 事前にアップロードされた画像を使用
-      targetImageUrl = uploadedImageUrl
-    } else {
-      // デフォルト: fal.aiのサンプル画像（テスト用）
-      targetImageUrl = 'https://fal.media/files/koala/Chls9L2ZnvuipUTEwlnJC.png'
-      console.log('デフォルトのサンプル画像を使用')
+    // Base64データをBlobに変換してアップロード
+    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '')
+    const binaryData = atob(base64Data)
+    const bytes = new Uint8Array(binaryData.length)
+    for (let i = 0; i < binaryData.length; i++) {
+      bytes[i] = binaryData.charCodeAt(i)
     }
+    const blob = new Blob([bytes], { type: 'image/jpeg' })
+    const targetImageUrl = await fal.storage.upload(blob)
+    
+    console.log('画像をfal.aiにアップロード:', targetImageUrl)
+
+    // プロンプトを改善：元画像の変更を明示的に指示
+    const enhancedPrompt = `Transform this image: ${prompt}. Keep the same location and architecture, add the requested elements while maintaining the original scene composition.`
+
+    console.log('画像生成開始')
+    console.log('元プロンプト:', prompt)
+    console.log('拡張プロンプト:', enhancedPrompt)
 
     // fal.ai Flux Image-to-Image APIを呼び出し
+    // strength を下げて元画像の構造を保持
     const result = await fal.subscribe('fal-ai/flux/dev/image-to-image', {
       input: {
         image_url: targetImageUrl,
-        prompt: prompt,
-        strength: 0.85,
-        num_inference_steps: 40,
-        guidance_scale: 3.5,
+        prompt: enhancedPrompt,
+        strength: 0.55,              // 元画像を55%保持、45%を変更
+        num_inference_steps: 40,     // 推論ステップ数
+        guidance_scale: 7.5,         // プロンプトへの忠実度を上げる
         num_images: 1,
         enable_safety_checker: true,
         output_format: 'jpeg'

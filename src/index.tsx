@@ -86,7 +86,7 @@ app.get('/', (c) => {
 /**
  * 画像表示画面
  * - 元画像表示
- * - スタイル/ライティング/構図の選択
+ * - スタイル/ライティングの選択（構図は「全体像」で固定）
  * - 自由文入力
  * - 生成ボタン
  */
@@ -130,17 +130,6 @@ app.get('/image-display', (c) => {
               <option value="dramatic lighting, high contrast">ドラマチック</option>
               <option value="soft lighting, diffused">柔らかい光</option>
               <option value="backlit, rim lighting">逆光</option>
-            </select>
-          </div>
-          
-          <!-- 構図 -->
-          <div class="form-group">
-            <label for="compositionSelect" class="form-label">構図</label>
-            <select id="compositionSelect" class="form-select">
-              <option value="close-up shot">クローズアップ</option>
-              <option value="full body shot, wide angle" selected>全体像</option>
-              <option value="aerial view, top-down">鳥瞰図</option>
-              <option value="low angle shot">低いアングル</option>
             </select>
           </div>
           
