@@ -23,6 +23,9 @@ const BASE_IMAGE_PATH = '/static/images/base-image.jpg';
 // シーンベース（固定：駅前ロータリー用）
 const SCENE_BASE = 'In an existing station-front urban plaza and rotary';
 
+// 変更範囲の指示（固定：中央の花壇と周りの広場のみ変更）
+const MODIFICATION_INSTRUCTION = 'Modify only the central flower bed and surrounding plaza area. Keep the existing station buildings, roads, and rotary unchanged.';
+
 // スタイル（固定：写真風）
 const STYLE_TAG = 'photorealistic, professional photography, high resolution';
 
@@ -62,6 +65,7 @@ function buildPrompt(freeText) {
   // 【制御用】英語 + 【意味追加】日本語（自由文）
   const parts = [
     SCENE_BASE,
+    MODIFICATION_INSTRUCTION,
     STYLE_TAG,
     LIGHTING_TAG,
     COMPOSITION_TAG,
