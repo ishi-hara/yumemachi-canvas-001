@@ -1,6 +1,7 @@
 /**
  * 画像表示画面用JavaScript
  * - 自由文入力バリデーション
+ * - 自動プロンプト機能（GPT-4.1-mini による翻訳・拡張）
  * - プロンプト構築（スタイル/ライティング/構図は固定）
  * - fal.ai Inpainting API呼び出し（マスク付き）
  * 
@@ -60,7 +61,7 @@ const NEGATIVE_PROMPT = [
 // ========================================
 
 /**
- * プロンプトを構築する
+ * プロンプトを構築する（自動プロンプトOFFの場合）
  * @param {string} freeText - 自由文（日本語）
  * @returns {string} 構築されたプロンプト
  */
@@ -81,6 +82,37 @@ function buildPrompt(freeText) {
   return parts.join(',\n');
 }
 
+/**
+ * GPT-4.1-miniで自動プロンプトを生成
+ * @param {string} freeText - 自由文（日本語）
+ * @returns {Promise<string>} 生成されたプロンプト
+ */
+async function generateAutoPrompt(freeText) {
+  console.log('=== 自動プロンプト生成開始 ===');
+  console.log('入力テキスト:', freeText);
+
+  const response = await fetch('/api/translate-prompt', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      text: freeText
+    })
+  });
+
+  const result = await response.json();
+
+  if (!result.success) {
+    throw new Error(result.error || '自動プロンプト生成に失敗しました');
+  }
+
+  console.log('=== 生成されたプロンプト ===');
+  console.log(result.prompt);
+
+  return result.prompt;
+}
+
 // ========================================
 // DOM要素取得・初期化
 // ========================================
@@ -94,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const loadingOverlay = document.getElementById('loadingOverlay');
   const baseImage = document.getElementById('baseImage');
   const maskImage = document.getElementById('maskImage');
+  const autoPromptCheckbox = document.getElementById('autoPromptCheckbox');
 
   // 文字数カウント・バリデーション設定
   setupTextValidation(freeText, charCount, generateButton);
@@ -106,7 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
       loadingOverlay,
       generateButton,
       baseImage,
-      maskImage
+      maskImage,
+      autoPromptCheckbox
     );
   });
 });
@@ -191,21 +225,14 @@ async function handleGenerate(
   loadingOverlay,
   generateButton,
   baseImage,
-  maskImage
+  maskImage,
+  autoPromptCheckbox
 ) {
   // 自由文を取得
   const freeTextValue = freeText.value.trim();
-
-  // プロンプトを構築
-  const prompt = buildPrompt(freeTextValue);
-
-  console.log('=== 画像生成パラメータ（Inpainting） ===');
-  console.log('スタイル: 写真風（固定）');
-  console.log('ライティング: 自然光（固定）');
-  console.log('構図: 全体像（固定）');
-  console.log('プロンプト:', prompt);
-  console.log('ネガティブプロンプト:', NEGATIVE_PROMPT);
-  console.log('パラメータ:', FAL_PARAMS);
+  
+  // 自動プロンプトのON/OFF確認
+  const isAutoPromptEnabled = autoPromptCheckbox.checked;
 
   // ボタンを無効化
   generateButton.disabled = true;
@@ -213,23 +240,46 @@ async function handleGenerate(
   // ローディング表示
   loadingOverlay.classList.add('active');
 
-  // 生成データをセッションストレージに保存
-  const generationData = {
-    prompt: prompt,
-    negativePrompt: NEGATIVE_PROMPT,
-    baseImageUrl: BASE_IMAGE_PATH,
-    maskImageUrl: MASK_IMAGE_PATH,
-    params: FAL_PARAMS,
-    options: {
-      style: '写真風',
-      lighting: '自然光',
-      composition: '全体像',
-      freeText: freeTextValue
-    }
-  };
-  sessionStorage.setItem('generationData', JSON.stringify(generationData));
-
   try {
+    // プロンプトを構築（自動プロンプトの有無で分岐）
+    let prompt;
+    
+    if (isAutoPromptEnabled) {
+      // 自動プロンプト ON: GPT-4.1-miniで翻訳・拡張
+      console.log('=== 自動プロンプトモード ===');
+      prompt = await generateAutoPrompt(freeTextValue);
+    } else {
+      // 自動プロンプト OFF: 従来通りの固定プロンプト + 日本語自由文
+      console.log('=== 通常モード ===');
+      prompt = buildPrompt(freeTextValue);
+    }
+
+    console.log('=== 画像生成パラメータ（Inpainting） ===');
+    console.log('自動プロンプト:', isAutoPromptEnabled ? 'ON' : 'OFF');
+    console.log('スタイル: 写真風（固定）');
+    console.log('ライティング: 自然光（固定）');
+    console.log('構図: 全体像（固定）');
+    console.log('最終プロンプト:', prompt);
+    console.log('ネガティブプロンプト:', NEGATIVE_PROMPT);
+    console.log('パラメータ:', FAL_PARAMS);
+
+    // 生成データをセッションストレージに保存
+    const generationData = {
+      prompt: prompt,
+      negativePrompt: NEGATIVE_PROMPT,
+      baseImageUrl: BASE_IMAGE_PATH,
+      maskImageUrl: MASK_IMAGE_PATH,
+      params: FAL_PARAMS,
+      options: {
+        style: '写真風',
+        lighting: '自然光',
+        composition: '全体像',
+        freeText: freeTextValue,
+        autoPrompt: isAutoPromptEnabled
+      }
+    };
+    sessionStorage.setItem('generationData', JSON.stringify(generationData));
+
     // 元画像をBase64に変換（JPEG）
     const imageData = imageToBase64Jpeg(baseImage);
     console.log('元画像をBase64に変換完了');

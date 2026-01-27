@@ -537,3 +537,70 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(255, 154, 158, 0.5);
 }
+
+/* ========================================
+   チェックボックス（自動プロンプト用）
+   ======================================== */
+.checkbox-group {
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 12px 16px;
+  background: #FFF;
+  border: 2px solid #E0E0E0;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.checkbox-label:hover {
+  border-color: #FFB6C1;
+  background: #FFF8FA;
+}
+
+.checkbox-input {
+  display: none;
+}
+
+/* カスタムチェックボックス */
+.checkbox-custom {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #CCC;
+  border-radius: 6px;
+  margin-right: 12px;
+  position: relative;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.checkbox-input:checked + .checkbox-custom {
+  background: linear-gradient(135deg, #7B68EE 0%, #9B89FF 100%);
+  border-color: #7B68EE;
+}
+
+.checkbox-input:checked + .checkbox-custom::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #FFF;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.checkbox-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+}
+
+.checkbox-input:checked ~ .checkbox-text {
+  color: #7B68EE;
+  font-weight: 600;
+}

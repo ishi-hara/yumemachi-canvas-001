@@ -5,10 +5,12 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import generateApi from './api/generate'
+import translateApi from './api/translate'
 
 // 環境変数の型定義
 type Bindings = {
   FAL_KEY: string
+  OPENAI_API_KEY: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -18,6 +20,9 @@ app.use('/api/*', cors())
 
 // 画像生成APIルート
 app.route('/api/generate', generateApi)
+
+// 自動プロンプト生成APIルート
+app.route('/api/translate-prompt', translateApi)
 
 /**
  * 共通HTMLヘッダー生成
@@ -123,6 +128,15 @@ app.get('/image-display', (c) => {
               required
             ></textarea>
             <div class="char-count"><span id="charCount">0</span> / 100</div>
+          </div>
+          
+          <!-- 自動プロンプトチェックボックス -->
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="autoPromptCheckbox" class="checkbox-input">
+              <span class="checkbox-custom"></span>
+              <span class="checkbox-text">自動プロンプト（AIが翻訳・拡張）</span>
+            </label>
           </div>
           
           <!-- 生成ボタン -->
