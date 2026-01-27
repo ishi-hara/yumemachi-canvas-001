@@ -2,7 +2,7 @@
  * 画像表示画面用JavaScript
  * - 自由文入力バリデーション
  * - プロンプト構築（スタイル/ライティング/構図は固定）
- * - fal.ai API呼び出し
+ * - fal.ai Inpainting API呼び出し（マスク付き）
  * 
  * 固定パラメータ:
  * - スタイル: 写真風
@@ -17,8 +17,9 @@
 // 定数定義（すべて固定）
 // ========================================
 
-// 元画像のパス
+// 画像パス
 const BASE_IMAGE_PATH = '/static/images/base-image.jpg';
+const MASK_IMAGE_PATH = '/static/images/mask-image.png';
 
 // シーンベース（固定：駅前ロータリー用）
 const SCENE_BASE = 'In an existing station-front urban plaza and rotary';
@@ -88,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const generateButton = document.getElementById('generateButton');
   const loadingOverlay = document.getElementById('loadingOverlay');
   const baseImage = document.getElementById('baseImage');
+  const maskImage = document.getElementById('maskImage');
 
   // 文字数カウント・バリデーション設定
   setupTextValidation(freeText, charCount, generateButton);
@@ -99,7 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
       freeText,
       loadingOverlay,
       generateButton,
-      baseImage
+      baseImage,
+      maskImage
     );
   });
 });
@@ -141,11 +144,11 @@ function updateButtonState(textarea, button) {
 // ========================================
 
 /**
- * 画像をBase64に変換
+ * 画像をBase64に変換（JPEG形式）
  * @param {HTMLImageElement} img - 画像要素
  * @returns {string} Base64データURI
  */
-function imageToBase64(img) {
+function imageToBase64Jpeg(img) {
   const canvas = document.createElement('canvas');
   canvas.width = img.naturalWidth;
   canvas.height = img.naturalHeight;
@@ -154,6 +157,22 @@ function imageToBase64(img) {
   ctx.drawImage(img, 0, 0);
   
   return canvas.toDataURL('image/jpeg', 0.9);
+}
+
+/**
+ * 画像をBase64に変換（PNG形式、マスク用）
+ * @param {HTMLImageElement} img - 画像要素
+ * @returns {string} Base64データURI
+ */
+function imageToBase64Png(img) {
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  
+  return canvas.toDataURL('image/png');
 }
 
 // ========================================
@@ -167,7 +186,8 @@ async function handleGenerate(
   freeText,
   loadingOverlay,
   generateButton,
-  baseImage
+  baseImage,
+  maskImage
 ) {
   // 自由文を取得
   const freeTextValue = freeText.value.trim();
@@ -175,7 +195,7 @@ async function handleGenerate(
   // プロンプトを構築
   const prompt = buildPrompt(freeTextValue);
 
-  console.log('=== 画像生成パラメータ ===');
+  console.log('=== 画像生成パラメータ（Inpainting） ===');
   console.log('スタイル: 写真風（固定）');
   console.log('ライティング: 自然光（固定）');
   console.log('構図: 全体像（固定）');
@@ -194,6 +214,7 @@ async function handleGenerate(
     prompt: prompt,
     negativePrompt: NEGATIVE_PROMPT,
     baseImageUrl: BASE_IMAGE_PATH,
+    maskImageUrl: MASK_IMAGE_PATH,
     params: FAL_PARAMS,
     options: {
       style: '写真風',
@@ -205,11 +226,15 @@ async function handleGenerate(
   sessionStorage.setItem('generationData', JSON.stringify(generationData));
 
   try {
-    // 画像をBase64に変換
-    const imageData = imageToBase64(baseImage);
-    console.log('画像をBase64に変換完了');
+    // 元画像をBase64に変換（JPEG）
+    const imageData = imageToBase64Jpeg(baseImage);
+    console.log('元画像をBase64に変換完了');
 
-    // fal.ai APIを呼び出し
+    // マスク画像をBase64に変換（PNG）
+    const maskData = imageToBase64Png(maskImage);
+    console.log('マスク画像をBase64に変換完了');
+
+    // fal.ai Inpainting APIを呼び出し
     const response = await fetch('/api/generate', {
       method: 'POST',
       headers: {
@@ -219,6 +244,7 @@ async function handleGenerate(
         prompt: prompt,
         negativePrompt: NEGATIVE_PROMPT,
         imageData: imageData,
+        maskData: maskData,
         strength: FAL_PARAMS.strength,
         steps: FAL_PARAMS.steps,
         guidance: FAL_PARAMS.guidance

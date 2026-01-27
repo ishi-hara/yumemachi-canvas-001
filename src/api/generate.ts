@@ -1,9 +1,11 @@
 /**
  * 画像生成APIエンドポイント
- * fal.aiを使用してImage-to-Image変換を行う
+ * fal.ai Inpainting APIを使用してマスク領域のみを変更する
  * 
  * パラメータはフロントエンドで計算され、APIに渡される
- * - strength: 元画像からの変更度合い
+ * - imageData: 元画像のBase64データ
+ * - maskData: マスク画像のBase64データ（白=変更領域、黒=固定領域）
+ * - strength: 変更の強度
  * - steps: 推論ステップ数
  * - guidance: プロンプトへの忠実度
  * - negativePrompt: 除外したい要素
@@ -20,6 +22,7 @@ type Bindings = {
 interface GenerateRequest {
   prompt: string
   imageData: string
+  maskData: string
   negativePrompt?: string
   strength?: number
   steps?: number
@@ -29,14 +32,32 @@ interface GenerateRequest {
 const generateApi = new Hono<{ Bindings: Bindings }>()
 
 /**
- * 画像生成エンドポイント
+ * Base64データをBlobに変換してfal.aiにアップロード
+ * @param base64Data - Base64エンコードされた画像データ
+ * @param mimeType - MIMEタイプ
+ * @returns アップロードされた画像のURL
+ */
+async function uploadBase64Image(base64Data: string, mimeType: string): Promise<string> {
+  const base64 = base64Data.replace(/^data:image\/\w+;base64,/, '')
+  const binaryData = atob(base64)
+  const bytes = new Uint8Array(binaryData.length)
+  for (let i = 0; i < binaryData.length; i++) {
+    bytes[i] = binaryData.charCodeAt(i)
+  }
+  const blob = new Blob([bytes], { type: mimeType })
+  return await fal.storage.upload(blob)
+}
+
+/**
+ * 画像生成エンドポイント（Inpainting）
  * POST /api/generate
  * 
  * リクエストボディ:
  * - prompt: 生成プロンプト（必須）
  * - imageData: 元画像のBase64データ（必須）
+ * - maskData: マスク画像のBase64データ（必須）
  * - negativePrompt: ネガティブプロンプト（任意）
- * - strength: 元画像からの変更度合い（任意、デフォルト0.40）
+ * - strength: 変更の強度（任意、デフォルト0.52）
  * - steps: 推論ステップ数（任意、デフォルト35）
  * - guidance: プロンプトへの忠実度（任意、デフォルト7.0）
  */
@@ -47,8 +68,9 @@ generateApi.post('/', async (c) => {
     const { 
       prompt, 
       imageData, 
+      maskData,
       negativePrompt,
-      strength = 0.40,
+      strength = 0.52,
       steps = 35,
       guidance = 7.0
     } = body
@@ -64,7 +86,14 @@ generateApi.post('/', async (c) => {
     if (!imageData) {
       return c.json({ 
         success: false, 
-        error: '画像データは必須です' 
+        error: '元画像データは必須です' 
+      }, 400)
+    }
+
+    if (!maskData) {
+      return c.json({ 
+        success: false, 
+        error: 'マスク画像データは必須です' 
       }, 400)
     }
 
@@ -81,26 +110,24 @@ generateApi.post('/', async (c) => {
       credentials: falKey
     })
 
-    // Base64データをBlobに変換してアップロード
-    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '')
-    const binaryData = atob(base64Data)
-    const bytes = new Uint8Array(binaryData.length)
-    for (let i = 0; i < binaryData.length; i++) {
-      bytes[i] = binaryData.charCodeAt(i)
-    }
-    const blob = new Blob([bytes], { type: 'image/jpeg' })
-    const targetImageUrl = await fal.storage.upload(blob)
-    
-    console.log('=== fal.ai 画像生成開始 ===')
-    console.log('画像URL:', targetImageUrl)
+    // 元画像をアップロード
+    const imageUrl = await uploadBase64Image(imageData, 'image/jpeg')
+    console.log('元画像アップロード完了:', imageUrl)
+
+    // マスク画像をアップロード
+    const maskUrl = await uploadBase64Image(maskData, 'image/png')
+    console.log('マスク画像アップロード完了:', maskUrl)
+
+    console.log('=== fal.ai Inpainting 開始 ===')
     console.log('プロンプト:', prompt)
     console.log('ネガティブプロンプト:', negativePrompt || 'なし')
     console.log('パラメータ:', { strength, steps, guidance })
 
-    // fal.ai API入力パラメータを構築
+    // fal.ai Inpainting API入力パラメータを構築
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const falInput: Record<string, any> = {
-      image_url: targetImageUrl,
+      image_url: imageUrl,
+      mask_url: maskUrl,
       prompt: prompt,
       strength: strength,
       num_inference_steps: steps,
@@ -111,14 +138,13 @@ generateApi.post('/', async (c) => {
     }
 
     // ネガティブプロンプトがあれば追加
-    // ※ fal-ai/flux/dev/image-to-image が対応していない場合はエラーになる可能性あり
-    // その場合は削除が必要
+    // ※ Inpainting APIが対応していない場合はエラーになる可能性あり
     if (negativePrompt) {
       falInput.negative_prompt = negativePrompt
     }
 
-    // fal.ai Flux Image-to-Image APIを呼び出し
-    const result = await fal.subscribe('fal-ai/flux/dev/image-to-image', {
+    // fal.ai Flux Inpainting APIを呼び出し
+    const result = await fal.subscribe('fal-ai/flux/dev/inpainting', {
       input: falInput,
       logs: true,
       onQueueUpdate: (update) => {
@@ -128,7 +154,7 @@ generateApi.post('/', async (c) => {
       }
     })
 
-    console.log('=== 画像生成完了 ===')
+    console.log('=== Inpainting 完了 ===')
 
     // 生成された画像URLを返す
     if (result.data && result.data.images && result.data.images.length > 0) {

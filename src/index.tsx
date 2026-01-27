@@ -104,6 +104,9 @@ app.get('/image-display', (c) => {
           <img src="/static/images/base-image.jpg" alt="元画像" class="base-image" id="baseImage">
         </div>
         
+        <!-- マスク画像（非表示、API送信用） -->
+        <img src="/static/images/mask-image.png" alt="マスク画像" id="maskImage" style="display: none;">
+        
         <!-- タイトル -->
         <h2 class="section-title">すてきな画像にしてみましょう</h2>
         
