@@ -8,9 +8,9 @@
  * - スタイル: 写真風
  * - ライティング: 自然光
  * - 構図: 全体像
- * - strength: 0.52
- * - steps: 35
- * - guidance: 7.0
+ * - strength: 0.75
+ * - steps: 42
+ * - guidance: 9.5
  */
 
 // ========================================
@@ -36,11 +36,14 @@ const LIGHTING_TAG = 'natural lighting, daylight';
 // 構図（固定：全体像）
 const COMPOSITION_TAG = 'full body shot, wide angle';
 
+// 追加の固定プロンプト（人物と構造物を明確に表示）
+const VISIBILITY_TAG = 'clearly visible people and structure, not empty';
+
 // fal.aiパラメータ（固定）
 const FAL_PARAMS = {
-  strength: 0.52,
-  steps: 35,
-  guidance: 7.0
+  strength: 0.75,
+  steps: 42,
+  guidance: 9.5
 };
 
 // ネガティブプロンプト（写真風用）
@@ -70,6 +73,7 @@ function buildPrompt(freeText) {
     STYLE_TAG,
     LIGHTING_TAG,
     COMPOSITION_TAG,
+    VISIBILITY_TAG,  // 追加：人物と構造物を明確に
     '',  // 空行で区切り
     freeText  // 日本語自由文
   ];

@@ -143,8 +143,8 @@ generateApi.post('/', async (c) => {
       falInput.negative_prompt = negativePrompt
     }
 
-    // fal.ai Flux Inpainting APIを呼び出し
-    const result = await fal.subscribe('fal-ai/flux/dev/inpainting', {
+    // fal.ai Flux General Inpainting APIを呼び出し
+    const result = await fal.subscribe('fal-ai/flux-general/inpainting', {
       input: falInput,
       logs: true,
       onQueueUpdate: (update) => {
