@@ -37,8 +37,9 @@ const LIGHTING_TAG = 'natural lighting, daylight';
 // 構図（固定：全体像）
 const COMPOSITION_TAG = 'full body shot, wide angle';
 
-// 追加の固定プロンプト（人物と構造物を明確に表示）
-const VISIBILITY_TAG = 'clearly visible people and structure, not empty';
+// 人と構造物の可視性（強化版）
+const VISIBILITY_TAG =
+  'Include 20 to 40 people as a mandatory and essential part of the scene. Do not generate the scene without people. Clearly visible people and structure, not empty.';
 
 // fal.aiパラメータ（固定）
 const FAL_PARAMS = {
