@@ -38,8 +38,13 @@ const LIGHTING_TAG = 'natural lighting, daylight';
 const COMPOSITION_TAG = 'full body shot, wide angle';
 
 // 人と構造物の可視性（強化版）
+// ★変更：人数の最低保証 + 分布 + 少人数禁止 を追加
 const VISIBILITY_TAG =
-  'Include 20 to 40 people as a mandatory and essential part of the scene. Do not generate the scene without people. Clearly visible people and structure, not empty.';
+  'Include AT LEAST 30 to 50 people as a mandatory and essential part of the scene. ' +
+  'People are distributed across the entire plaza, visible in the foreground and midground. ' +
+  'People are clearly visible, expressive, and in focus. ' +
+  'Do not generate the scene without people. ' +
+  'Do not generate scenes with sparse crowds or only a few people.';
 
 // fal.aiパラメータ（固定）
 const FAL_PARAMS = {
@@ -75,7 +80,7 @@ function buildPrompt(freeText) {
     STYLE_TAG,
     LIGHTING_TAG,
     COMPOSITION_TAG,
-    VISIBILITY_TAG,  // 追加：人物と構造物を明確に
+    VISIBILITY_TAG,  // ★人数の最低保証・分布・少人数禁止
     '',  // 空行で区切り
     freeText  // 日本語自由文
   ];
@@ -289,6 +294,19 @@ async function handleGenerate(
       // 自動プロンプト ON: GPT-4.1-miniで翻訳・拡張
       console.log('=== 自動プロンプトモード ===');
       prompt = await generateAutoPrompt(freeTextValue);
+
+      // ★追加：自動プロンプトにも「人数強制」タグを必ず注入
+      prompt = [
+        SCENE_BASE,
+        MODIFICATION_INSTRUCTION,
+        STYLE_TAG,
+        LIGHTING_TAG,
+        COMPOSITION_TAG,
+        VISIBILITY_TAG,
+        '',
+        prompt
+      ].join(',\n');
+
     } else {
       // 自動プロンプト OFF: 従来通りの固定プロンプト + 日本語自由文
       console.log('=== 通常モード ===');
