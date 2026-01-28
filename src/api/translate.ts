@@ -35,6 +35,8 @@ Strict rules:
 - NEVER write descriptive or narrative sentences.
 - Use ONLY imperative construction verbs such as:
   Remove, Install, Include, Keep, Capture.
+- Allow imperative prohibition sentences such as:
+  "Do not generate the scene without people."
 
 Inpainting rules:
 - Always assume the original central flower bed is completely removed.
@@ -48,8 +50,11 @@ Physical specification rules:
 - Always specify whether the installation is active, operating, or open to the public.
 - Always specify ground contact, base structure, or foundation type.
 
-People rules (ENHANCED):
+People rules (ENHANCED, MANDATORY):
 - If the request implies public use, ALWAYS include people.
+- People are a mandatory structural element of the scene.
+- The output is INVALID if people are not included.
+- Explicitly forbid generating scenes without people.
 - Increase crowd density by default:
   specify no fewer than 10 people unless explicitly requested otherwise.
 - Specify the number of people with numeric ranges (e.g., 20–40 people).
