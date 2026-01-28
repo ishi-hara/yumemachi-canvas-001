@@ -459,6 +459,21 @@ body {
   color: #FF6B9D;
 }
 
+.loading-notice {
+  font-size: 14px;
+  color: #888;
+  margin-top: 16px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.loading-timer {
+  font-size: 16px;
+  font-weight: 600;
+  color: #7B68EE;
+  margin-top: 12px;
+}
+
 /* ========================================
    結果画面
    ======================================== */

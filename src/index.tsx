@@ -152,6 +152,8 @@ app.get('/image-display', (c) => {
       <div class="loading-content">
         <div class="loading-spinner"></div>
         <p class="loading-text">生成中...</p>
+        <p class="loading-notice">画像生成には1〜2分<br>かかる場合があります</p>
+        <p class="loading-timer">経過時間: <span id="elapsedTime">0</span>秒</p>
       </div>
     </div>
     

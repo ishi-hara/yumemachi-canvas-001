@@ -215,6 +215,43 @@ function imageToBase64Png(img) {
 }
 
 // ========================================
+// タイマー管理
+// ========================================
+
+let elapsedTimerInterval = null;
+let elapsedSeconds = 0;
+
+/**
+ * 経過時間タイマーを開始
+ */
+function startElapsedTimer() {
+  // 初期化
+  elapsedSeconds = 0;
+  const elapsedTimeElement = document.getElementById('elapsedTime');
+  if (elapsedTimeElement) {
+    elapsedTimeElement.textContent = '0';
+  }
+
+  // 1秒ごとにカウントアップ
+  elapsedTimerInterval = setInterval(() => {
+    elapsedSeconds++;
+    if (elapsedTimeElement) {
+      elapsedTimeElement.textContent = elapsedSeconds;
+    }
+  }, 1000);
+}
+
+/**
+ * 経過時間タイマーを停止
+ */
+function stopElapsedTimer() {
+  if (elapsedTimerInterval) {
+    clearInterval(elapsedTimerInterval);
+    elapsedTimerInterval = null;
+  }
+}
+
+// ========================================
 // 生成処理
 // ========================================
 
@@ -240,6 +277,9 @@ async function handleGenerate(
 
   // ローディング表示
   loadingOverlay.classList.add('active');
+
+  // 経過時間タイマーを開始
+  startElapsedTimer();
 
   try {
     // プロンプトを構築（自動プロンプトの有無で分岐）
@@ -310,7 +350,8 @@ async function handleGenerate(
     console.log('API応答:', result);
 
     if (result.success && result.imageUrl) {
-      // 生成成功：画像URLを保存して結果画面へ
+      // 生成成功：タイマー停止、画像URLを保存して結果画面へ
+      stopElapsedTimer();
       sessionStorage.setItem('generatedImageUrl', result.imageUrl);
       window.location.href = '/result';
     } else {
@@ -319,6 +360,9 @@ async function handleGenerate(
 
   } catch (error) {
     console.error('画像生成エラー:', error);
+    
+    // タイマー停止
+    stopElapsedTimer();
     
     // ローディング非表示
     loadingOverlay.classList.remove('active');
