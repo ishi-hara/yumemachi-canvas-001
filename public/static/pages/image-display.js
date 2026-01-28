@@ -10,7 +10,7 @@
  * - ライティング: 自然光
  * - 構図: 全体像
  * - strength: 0.75
- * - steps: 42
+ * - steps: 45
  * - guidance: 9.5
  */
 
@@ -49,7 +49,7 @@ const VISIBILITY_TAG =
 // fal.aiパラメータ（固定）
 const FAL_PARAMS = {
   strength: 0.75,
-  steps: 42,
+  steps: 45,
   guidance: 9.5
 };
 
