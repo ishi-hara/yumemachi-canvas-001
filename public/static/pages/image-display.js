@@ -133,9 +133,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const baseImage = document.getElementById('baseImage');
   const maskImage = document.getElementById('maskImage');
   const autoPromptCheckbox = document.getElementById('autoPromptCheckbox');
+  const imageModeSelect = document.getElementById('imageMode');
 
   // 文字数カウント・バリデーション設定
   setupTextValidation(freeText, charCount, generateButton);
+
+  // 画像案選択の変更イベント（創造性モード時は自動プロンプトを無効化）
+  setupImageModeHandler(imageModeSelect, autoPromptCheckbox);
 
   // フォーム送信イベント
   form.addEventListener('submit', (e) => {
@@ -146,7 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
       generateButton,
       baseImage,
       maskImage,
-      autoPromptCheckbox
+      autoPromptCheckbox,
+      imageModeSelect
     );
   });
 });
@@ -181,6 +186,40 @@ function setupTextValidation(textarea, countDisplay, button) {
 function updateButtonState(textarea, button) {
   const text = textarea.value.trim();
   button.disabled = text.length === 0;
+}
+
+/**
+ * 画像案選択の変更ハンドラ設定
+ * 創造性モード時は自動プロンプトチェックボックスを無効化（グレーアウト）
+ */
+function setupImageModeHandler(modeSelect, autoPromptCheckbox) {
+  const checkboxLabel = autoPromptCheckbox.closest('.checkbox-label');
+  const checkboxGroup = autoPromptCheckbox.closest('.checkbox-group');
+
+  function updateAutoPromptState() {
+    const isCreativeMode = modeSelect.value === 'creative';
+
+    if (isCreativeMode) {
+      // 創造性モード: 自動プロンプトを無効化・チェックを外す
+      autoPromptCheckbox.disabled = true;
+      autoPromptCheckbox.checked = false;
+      if (checkboxGroup) {
+        checkboxGroup.classList.add('disabled');
+      }
+    } else {
+      // 通常モード: 自動プロンプトを有効化
+      autoPromptCheckbox.disabled = false;
+      if (checkboxGroup) {
+        checkboxGroup.classList.remove('disabled');
+      }
+    }
+  }
+
+  // 初期状態を設定
+  updateAutoPromptState();
+
+  // 変更イベントを設定
+  modeSelect.addEventListener('change', updateAutoPromptState);
 }
 
 // ========================================
@@ -269,13 +308,18 @@ async function handleGenerate(
   generateButton,
   baseImage,
   maskImage,
-  autoPromptCheckbox
+  autoPromptCheckbox,
+  imageModeSelect
 ) {
   // 自由文を取得
   const freeTextValue = freeText.value.trim();
   
-  // 自動プロンプトのON/OFF確認
-  const isAutoPromptEnabled = autoPromptCheckbox.checked;
+  // 画像案（通常 / 創造性）を取得
+  const imageMode = imageModeSelect.value;
+  const isCreativeMode = imageMode === 'creative';
+  
+  // 自動プロンプトのON/OFF確認（創造性モードでは無効）
+  const isAutoPromptEnabled = !isCreativeMode && autoPromptCheckbox.checked;
 
   // ボタンを無効化
   generateButton.disabled = true;
@@ -325,47 +369,81 @@ async function handleGenerate(
     // 生成データをセッションストレージに保存
     const generationData = {
       prompt: prompt,
-      negativePrompt: NEGATIVE_PROMPT,
+      negativePrompt: isCreativeMode ? null : NEGATIVE_PROMPT,
       baseImageUrl: BASE_IMAGE_PATH,
-      maskImageUrl: MASK_IMAGE_PATH,
-      params: FAL_PARAMS,
+      maskImageUrl: isCreativeMode ? null : MASK_IMAGE_PATH,
+      params: isCreativeMode ? null : FAL_PARAMS,
       options: {
-        style: '写真風',
-        lighting: '自然光',
-        composition: '全体像',
+        style: isCreativeMode ? '創造性' : '写真風',
+        lighting: isCreativeMode ? '自動' : '自然光',
+        composition: isCreativeMode ? '自動' : '全体像',
         freeText: freeTextValue,
-        autoPrompt: isAutoPromptEnabled
+        autoPrompt: isAutoPromptEnabled,
+        imageMode: imageMode
       }
     };
     sessionStorage.setItem('generationData', JSON.stringify(generationData));
 
-    // 元画像をBase64に変換（JPEG）
-    const imageData = imageToBase64Jpeg(baseImage);
-    console.log('元画像をBase64に変換完了');
+    let response;
+    let result;
 
-    // マスク画像をBase64に変換（PNG）
-    const maskData = imageToBase64Png(maskImage);
-    console.log('マスク画像をBase64に変換完了');
+    if (isCreativeMode) {
+      // ========================================
+      // 創造性モード: GPT-Image-1.5 (images/generations)
+      // ========================================
+      console.log('=== 創造性モード: GPT-Image-1.5 ===');
+      console.log('プロンプト:', freeTextValue);
 
-    // fal.ai Inpainting APIを呼び出し
-    const response = await fetch('/api/generate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        prompt: prompt,
-        negativePrompt: NEGATIVE_PROMPT,
-        imageData: imageData,
-        maskData: maskData,
-        strength: FAL_PARAMS.strength,
-        steps: FAL_PARAMS.steps,
-        guidance: FAL_PARAMS.guidance
-      })
-    });
+      // プロンプトに駅前広場の文脈を追加
+      const creativePrompt = `A photorealistic image of a station-front urban plaza and rotary. ${freeTextValue}. Professional photography, natural daylight, wide angle composition.`;
+      console.log('最終プロンプト:', creativePrompt);
 
-    const result = await response.json();
-    console.log('API応答:', result);
+      response = await fetch('/api/creative', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: creativePrompt
+        })
+      });
+
+      result = await response.json();
+      console.log('GPT-Image-1.5 API応答:', result);
+
+    } else {
+      // ========================================
+      // 通常モード: fal.ai Inpainting API
+      // ========================================
+
+      // 元画像をBase64に変換（JPEG）
+      const imageData = imageToBase64Jpeg(baseImage);
+      console.log('元画像をBase64に変換完了');
+
+      // マスク画像をBase64に変換（PNG）
+      const maskData = imageToBase64Png(maskImage);
+      console.log('マスク画像をBase64に変換完了');
+
+      // fal.ai Inpainting APIを呼び出し
+      response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          negativePrompt: NEGATIVE_PROMPT,
+          imageData: imageData,
+          maskData: maskData,
+          strength: FAL_PARAMS.strength,
+          steps: FAL_PARAMS.steps,
+          guidance: FAL_PARAMS.guidance
+        })
+      });
+
+      result = await response.json();
+      console.log('fal.ai API応答:', result);
+    }
 
     if (result.success && result.imageUrl) {
       // 生成成功：タイマー停止、画像URLを保存して結果画面へ

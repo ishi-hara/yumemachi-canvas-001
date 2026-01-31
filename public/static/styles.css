@@ -619,3 +619,24 @@ body {
   color: #7B68EE;
   font-weight: 600;
 }
+
+/* 無効化状態（創造性モード時） */
+.checkbox-group.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.checkbox-group.disabled .checkbox-label {
+  cursor: not-allowed;
+  background: #F5F5F5;
+  border-color: #DDD;
+}
+
+.checkbox-group.disabled .checkbox-custom {
+  background: #E0E0E0;
+  border-color: #CCC;
+}
+
+.checkbox-group.disabled .checkbox-text {
+  color: #999;
+}

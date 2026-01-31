@@ -6,6 +6,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import generateApi from './api/generate'
 import translateApi from './api/translate'
+import creativeApi from './api/creative'
 
 // 環境変数の型定義
 type Bindings = {
@@ -18,11 +19,14 @@ const app = new Hono<{ Bindings: Bindings }>()
 // CORS設定（API用）
 app.use('/api/*', cors())
 
-// 画像生成APIルート
+// 画像生成APIルート（通常モード: fal.ai Inpainting）
 app.route('/api/generate', generateApi)
 
-// 自動プロンプト生成APIルート
+// 自動プロンプト生成APIルート（GPT-4.1-mini）
 app.route('/api/translate-prompt', translateApi)
+
+// 創造性モード画像生成APIルート（GPT-Image-1.5）
+app.route('/api/creative', creativeApi)
 
 /**
  * 共通HTMLヘッダー生成
@@ -117,6 +121,15 @@ app.get('/image-display', (c) => {
         
         <!-- オプション選択フォーム -->
         <form class="options-form" id="optionsForm">
+          <!-- 画像案選択 -->
+          <div class="form-group">
+            <label for="imageMode" class="form-label">画像案</label>
+            <select id="imageMode" class="form-select">
+              <option value="normal" selected>通常</option>
+              <option value="creative">創造性</option>
+            </select>
+          </div>
+          
           <!-- 自由文入力 -->
           <div class="form-group">
             <label for="freeText" class="form-label">自由文（100文字以内、必須）</label>
