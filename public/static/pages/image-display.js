@@ -392,10 +392,33 @@ async function handleGenerate(
       // 創造性モード: GPT-Image-1.5 (images/generations)
       // ========================================
       console.log('=== 創造性モード: GPT-Image-1.5 ===');
-      console.log('プロンプト:', freeTextValue);
+      console.log('ユーザー入力:', freeTextValue);
 
-      // プロンプトに駅前広場の文脈を追加
-      const creativePrompt = `A photorealistic image of a station-front urban plaza and rotary. ${freeTextValue}. Professional photography, natural daylight, wide angle composition.`;
+      // 創造性モード用の詳細プロンプト
+      const creativePrompt = `Preserve all existing background elements exactly as they are, including station buildings, surrounding roads, sidewalks, trees, sky, lighting, perspective, and camera angle.
+Do not modify, replace, stylize, reinterpret, or regenerate any background structures or environment outside the central circular plaza area.
+
+Replace ONLY the central circular plaza area with a highly creative, non-traditional public-space installation.
+Do not assume or default to any conventional plaza, playground, or fountain design.
+
+Install an imaginative, sculptural, or experiential centerpiece that may include water, light, landscape, art, or play elements, but is not limited to a fountain.
+Allow abstract, organic, or story-like forms that prioritize artistic expression and emotional impact over clear function or usability.
+
+Use low-height elements, gentle curves, and human-scale proportions suitable for families and children.
+The design should feel safe, approachable, and emotionally engaging rather than monumental or architectural.
+
+Maintain realistic materials, believable physics, and accurate scale.
+Ensure the installation integrates naturally with the existing plaza paving and surroundings.
+
+Do NOT include people unless strictly required for scale reference.
+If included, keep them minimal and visually subordinate.
+
+Maintain photorealistic quality with natural daylight, consistent shadows, and color temperature matching the original image.
+Ensure seamless blending at the boundary between the modified central plaza and the unchanged background.
+
+Output a single, cohesive, high-resolution photorealistic image.
+
+User request: ${freeTextValue}`;
       console.log('最終プロンプト:', creativePrompt);
 
       response = await fetch('/api/creative', {
