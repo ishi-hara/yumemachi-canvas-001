@@ -604,10 +604,10 @@ User request: ${freeTextValue}`;
         guidance: FAL_PARAMS.guidance
       };
 
-      // 参考画像がある場合は追加
+      // 参考画像がある場合はURLをそのまま送付（本番環境で公開URL経由でfal.aiがアクセス）
       if (referenceImagePath) {
         requestBody.referenceImageUrl = referenceImagePath;
-        console.log('参考画像を追加:', referenceImagePath);
+        console.log('参考画像URL:', referenceImagePath);
       }
 
       // fal.ai Inpainting APIを呼び出し

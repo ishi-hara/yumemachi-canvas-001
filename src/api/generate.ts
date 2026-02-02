@@ -9,6 +9,7 @@
  * - steps: 推論ステップ数
  * - guidance: プロンプトへの忠実度
  * - negativePrompt: 除外したい要素
+ * - referenceImageUrl: 参考画像の相対パス（本番URLに変換してfal.aiに渡す）
  */
 import { Hono } from 'hono'
 import { fal } from '@fal-ai/client'
@@ -27,8 +28,11 @@ interface GenerateRequest {
   strength?: number
   steps?: number
   guidance?: number
-  referenceImageUrl?: string  // 参考画像のURL（建物タイプ別）
+  referenceImageUrl?: string  // 参考画像の相対パス（/static/images/references/...）
 }
+
+// 本番環境のベースURL
+const PRODUCTION_BASE_URL = 'https://yumemachi-canvas.pages.dev'
 
 const generateApi = new Hono<{ Bindings: Bindings }>()
 
@@ -61,6 +65,7 @@ async function uploadBase64Image(base64Data: string, mimeType: string): Promise<
  * - strength: 変更の強度（任意、デフォルト0.52）
  * - steps: 推論ステップ数（任意、デフォルト35）
  * - guidance: プロンプトへの忠実度（任意、デフォルト7.0）
+ * - referenceImageUrl: 参考画像の相対パス（任意）
  */
 generateApi.post('/', async (c) => {
   try {
@@ -120,26 +125,18 @@ generateApi.post('/', async (c) => {
     const maskUrl = await uploadBase64Image(maskData, 'image/png')
     console.log('マスク画像アップロード完了:', maskUrl)
 
-    // 参考画像がある場合はアップロード
-    let referenceUrl: string | null = null
+    // 参考画像がある場合は本番URLに変換
+    let fullReferenceUrl: string | null = null
     if (referenceImageUrl) {
-      // 参考画像をfetchしてBase64に変換してアップロード
-      try {
-        const refResponse = await fetch(new URL(referenceImageUrl, c.req.url).toString())
-        if (refResponse.ok) {
-          const refBlob = await refResponse.blob()
-          referenceUrl = await fal.storage.upload(refBlob)
-          console.log('参考画像アップロード完了:', referenceUrl)
-        }
-      } catch (refError) {
-        console.warn('参考画像のアップロードに失敗しました:', refError)
-      }
+      // 相対パスを本番URLに変換
+      fullReferenceUrl = PRODUCTION_BASE_URL + referenceImageUrl
+      console.log('参考画像URL:', fullReferenceUrl)
     }
 
     console.log('=== fal.ai Inpainting 開始 ===')
     console.log('プロンプト:', prompt)
     console.log('ネガティブプロンプト:', negativePrompt || 'なし')
-    console.log('参考画像:', referenceUrl || 'なし')
+    console.log('参考画像:', fullReferenceUrl || 'なし')
     console.log('パラメータ:', { strength, steps, guidance })
 
     // fal.ai Inpainting API入力パラメータを構築
@@ -163,8 +160,9 @@ generateApi.post('/', async (c) => {
     }
 
     // 参考画像があれば追加（デザイン思想の参照用）
-    if (referenceUrl) {
-      falInput.reference_image_url = referenceUrl
+    // fal.aiが公開URLから直接画像を取得
+    if (fullReferenceUrl) {
+      falInput.reference_image_url = fullReferenceUrl
     }
 
     // fal.ai Flux General Inpainting APIを呼び出し
