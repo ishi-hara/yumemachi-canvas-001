@@ -121,9 +121,9 @@ app.get('/image-display', (c) => {
         
         <!-- オプション選択フォーム -->
         <form class="options-form" id="optionsForm">
-          <!-- 画像案選択 -->
+          <!-- 生成タイプ選択 -->
           <div class="form-group">
-            <label for="imageMode" class="form-label">画像案</label>
+            <label for="imageMode" class="form-label">生成タイプ</label>
             <select id="imageMode" class="form-select">
               <option value="normal" selected>通常</option>
               <option value="creative">創造性</option>
@@ -161,7 +161,7 @@ app.get('/image-display', (c) => {
               id="freeText" 
               class="form-textarea" 
               maxlength="100" 
-              placeholder="例：親子で遊べる噴水広場がほしい"
+              placeholder="例：ワクワクするもの"
               required
             ></textarea>
             <div class="char-count"><span id="charCount">0</span> / 100</div>
