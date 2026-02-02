@@ -130,6 +130,30 @@ app.get('/image-display', (c) => {
             </select>
           </div>
           
+          <!-- 建物選択 -->
+          <div class="form-group">
+            <label for="buildingType" class="form-label">建物</label>
+            <select id="buildingType" class="form-select">
+              <option value="fountain" selected>噴水</option>
+              <option value="merry-go-round">メリーゴーランド</option>
+              <option value="cafe-stand">おしゃれなカフェスタンド</option>
+              <option value="other">その他</option>
+            </select>
+          </div>
+          
+          <!-- その他の建物入力（その他選択時のみ表示） -->
+          <div class="form-group" id="otherBuildingGroup" style="display: none;">
+            <label for="otherBuilding" class="form-label">その他の建物（30文字以内、任意）</label>
+            <input 
+              type="text" 
+              id="otherBuilding" 
+              class="form-input" 
+              maxlength="30" 
+              placeholder="例：ミニ動物園"
+            >
+            <div class="char-count"><span id="otherCharCount">0</span> / 30</div>
+          </div>
+          
           <!-- 自由文入力 -->
           <div class="form-group">
             <label for="freeText" class="form-label">自由文（100文字以内、必須）</label>

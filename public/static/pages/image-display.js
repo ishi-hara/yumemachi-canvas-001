@@ -22,6 +22,33 @@
 const BASE_IMAGE_PATH = '/static/images/base-image.jpg';
 const MASK_IMAGE_PATH = '/static/images/mask-image.png';
 
+// 参考画像パス（建物タイプ別）
+const REFERENCE_IMAGES = {
+  'fountain': [
+    '/static/images/references/001-funsui-01.png',
+    '/static/images/references/001-funsui-02.png',
+    '/static/images/references/001-funsui-03.png'
+  ],
+  'merry-go-round': [
+    '/static/images/references/002-merigoland-01.png',
+    '/static/images/references/002-merigoland-02.png',
+    '/static/images/references/002-merigoland-03.png'
+  ],
+  'cafe-stand': [
+    '/static/images/references/003-cafestand-01.png',
+    '/static/images/references/003-cafestand-02.png',
+    '/static/images/references/003-cafestand-03.png'
+  ]
+};
+
+// 建物タイプの英語名マッピング
+const BUILDING_TYPE_NAMES = {
+  'fountain': 'fountain',
+  'merry-go-round': 'merry-go-round',
+  'cafe-stand': 'Stylish cafe stand',
+  'other': ''  // その他は入力値を使用
+};
+
 // シーンベース（固定：駅前ロータリー用）
 const SCENE_BASE = 'In an existing station-front urban plaza and rotary';
 
@@ -89,6 +116,30 @@ function buildPrompt(freeText) {
 }
 
 /**
+ * プロンプトを構築する（建物指定あり）
+ * @param {string} freeText - 自由文（日本語）
+ * @param {string} buildingInstruction - 建物の指示（英語）
+ * @returns {string} 構築されたプロンプト
+ */
+function buildPromptWithBuilding(freeText, buildingInstruction) {
+  // プロンプト構築
+  // 【制御用】英語 + 【建物指定】+ 【意味追加】日本語（自由文）
+  const parts = [
+    SCENE_BASE,
+    MODIFICATION_INSTRUCTION,
+    buildingInstruction,  // ★建物の指示を追加
+    STYLE_TAG,
+    LIGHTING_TAG,
+    COMPOSITION_TAG,
+    VISIBILITY_TAG,  // ★人数の最低保証・分布・少人数禁止
+    '',  // 空行で区切り
+    freeText  // 日本語自由文
+  ].filter(Boolean);  // 空文字列を除去
+
+  return parts.join(',\n');
+}
+
+/**
  * GPT-4.1-miniで自動プロンプトを生成
  * @param {string} freeText - 自由文（日本語）
  * @returns {Promise<string>} 生成されたプロンプト
@@ -134,12 +185,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const maskImage = document.getElementById('maskImage');
   const autoPromptCheckbox = document.getElementById('autoPromptCheckbox');
   const imageModeSelect = document.getElementById('imageMode');
+  const buildingTypeSelect = document.getElementById('buildingType');
+  const otherBuildingGroup = document.getElementById('otherBuildingGroup');
+  const otherBuildingInput = document.getElementById('otherBuilding');
+  const otherCharCount = document.getElementById('otherCharCount');
 
   // 文字数カウント・バリデーション設定
   setupTextValidation(freeText, charCount, generateButton);
 
   // 画像案選択の変更イベント（創造性モード時は自動プロンプトを無効化）
   setupImageModeHandler(imageModeSelect, autoPromptCheckbox);
+
+  // 建物選択の変更イベント（その他選択時に入力欄を表示）
+  setupBuildingTypeHandler(buildingTypeSelect, otherBuildingGroup, otherBuildingInput, otherCharCount);
 
   // フォーム送信イベント
   form.addEventListener('submit', (e) => {
@@ -151,7 +209,9 @@ document.addEventListener('DOMContentLoaded', () => {
       baseImage,
       maskImage,
       autoPromptCheckbox,
-      imageModeSelect
+      imageModeSelect,
+      buildingTypeSelect,
+      otherBuildingInput
     );
   });
 });
@@ -186,6 +246,65 @@ function setupTextValidation(textarea, countDisplay, button) {
 function updateButtonState(textarea, button) {
   const text = textarea.value.trim();
   button.disabled = text.length === 0;
+}
+
+/**
+ * 建物選択の変更ハンドラ設定
+ * その他選択時に入力欄を表示
+ */
+function setupBuildingTypeHandler(buildingSelect, otherGroup, otherInput, otherCharCount) {
+  function updateOtherVisibility() {
+    const isOther = buildingSelect.value === 'other';
+    otherGroup.style.display = isOther ? 'block' : 'none';
+    if (!isOther) {
+      otherInput.value = '';
+      otherCharCount.textContent = '0';
+    }
+  }
+
+  // その他入力の文字数カウント
+  otherInput.addEventListener('input', () => {
+    const length = otherInput.value.length;
+    otherCharCount.textContent = length;
+    if (length > 30) {
+      otherCharCount.style.color = '#FF4444';
+    } else {
+      otherCharCount.style.color = '#888';
+    }
+  });
+
+  // 初期状態を設定
+  updateOtherVisibility();
+
+  // 変更イベントを設定
+  buildingSelect.addEventListener('change', updateOtherVisibility);
+}
+
+/**
+ * 建物タイプから参考画像をランダムに選択
+ * @param {string} buildingType - 建物タイプ
+ * @returns {string|null} 参考画像のパス（その他の場合はnull）
+ */
+function getRandomReferenceImage(buildingType) {
+  const images = REFERENCE_IMAGES[buildingType];
+  if (!images || images.length === 0) {
+    return null;
+  }
+  const randomIndex = Math.floor(Math.random() * images.length);
+  return images[randomIndex];
+}
+
+/**
+ * 建物タイプから英語名を取得
+ * @param {string} buildingType - 建物タイプ
+ * @param {string} otherValue - その他の場合の入力値
+ * @returns {string} 英語の建物名
+ */
+function getBuildingTypeName(buildingType, otherValue) {
+  if (buildingType === 'other') {
+    return otherValue || '';
+  }
+  return BUILDING_TYPE_NAMES[buildingType] || '';
 }
 
 /**
@@ -309,7 +428,9 @@ async function handleGenerate(
   baseImage,
   maskImage,
   autoPromptCheckbox,
-  imageModeSelect
+  imageModeSelect,
+  buildingTypeSelect,
+  otherBuildingInput
 ) {
   // 自由文を取得
   const freeTextValue = freeText.value.trim();
@@ -317,6 +438,21 @@ async function handleGenerate(
   // 画像案（通常 / 創造性）を取得
   const imageMode = imageModeSelect.value;
   const isCreativeMode = imageMode === 'creative';
+  
+  // 建物タイプを取得
+  const buildingType = buildingTypeSelect.value;
+  const otherBuildingValue = otherBuildingInput.value.trim();
+  const buildingTypeName = getBuildingTypeName(buildingType, otherBuildingValue);
+  
+  // 参考画像を取得（通常モードで、その他以外の場合）
+  const referenceImagePath = !isCreativeMode && buildingType !== 'other' 
+    ? getRandomReferenceImage(buildingType) 
+    : null;
+  
+  console.log('=== 建物選択 ===');
+  console.log('建物タイプ:', buildingType);
+  console.log('建物名（英語）:', buildingTypeName);
+  console.log('参考画像:', referenceImagePath || 'なし');
   
   // 自動プロンプトのON/OFF確認（創造性モードでは無効）
   const isAutoPromptEnabled = !isCreativeMode && autoPromptCheckbox.checked;
@@ -340,21 +476,27 @@ async function handleGenerate(
       prompt = await generateAutoPrompt(freeTextValue);
 
       // ★追加：自動プロンプトにも「人数強制」タグを必ず注入
+      // ★追加：建物名もプロンプトに追加
       prompt = [
         SCENE_BASE,
         MODIFICATION_INSTRUCTION,
+        buildingTypeName ? `Install a ${buildingTypeName} in the central plaza area` : '',
         STYLE_TAG,
         LIGHTING_TAG,
         COMPOSITION_TAG,
         VISIBILITY_TAG,
         '',
         prompt
-      ].join(',\n');
+      ].filter(Boolean).join(',\n');
 
     } else {
       // 自動プロンプト OFF: 従来通りの固定プロンプト + 日本語自由文
       console.log('=== 通常モード ===');
-      prompt = buildPrompt(freeTextValue);
+      // ★追加：建物名をプロンプトに追加
+      const buildingInstruction = buildingTypeName 
+        ? `Install a ${buildingTypeName} in the central plaza area` 
+        : '';
+      prompt = buildPromptWithBuilding(freeTextValue, buildingInstruction);
     }
 
     console.log('=== 画像生成パラメータ（Inpainting） ===');
@@ -394,12 +536,16 @@ async function handleGenerate(
       console.log('=== 創造性モード: GPT-Image-1.5 ===');
       console.log('ユーザー入力:', freeTextValue);
 
-      // 創造性モード用の詳細プロンプト
+      // 創造性モード用の詳細プロンプト（建物名を追加）
+      const buildingLine = buildingTypeName 
+        ? `\nInstallation type: ${buildingTypeName}` 
+        : '';
+      
       const creativePrompt = `Preserve all existing background elements exactly as they are, including station buildings, surrounding roads, sidewalks, trees, sky, lighting, perspective, and camera angle.
 Do not modify, replace, stylize, reinterpret, or regenerate any background structures or environment outside the central circular plaza area.
 
 Replace ONLY the central circular plaza area with a highly creative, non-traditional public-space installation.
-Do not assume or default to any conventional plaza, playground, or fountain design.
+Do not assume or default to any conventional plaza, playground, or fountain design.${buildingLine}
 
 Install an imaginative, sculptural, or experiential centerpiece that may include water, light, landscape, art, or play elements, but is not limited to a fountain.
 Allow abstract, organic, or story-like forms that prioritize artistic expression and emotional impact over clear function or usability.
@@ -447,21 +593,30 @@ User request: ${freeTextValue}`;
       const maskData = imageToBase64Png(maskImage);
       console.log('マスク画像をBase64に変換完了');
 
+      // APIリクエストボディを構築
+      const requestBody = {
+        prompt: prompt,
+        negativePrompt: NEGATIVE_PROMPT,
+        imageData: imageData,
+        maskData: maskData,
+        strength: FAL_PARAMS.strength,
+        steps: FAL_PARAMS.steps,
+        guidance: FAL_PARAMS.guidance
+      };
+
+      // 参考画像がある場合は追加
+      if (referenceImagePath) {
+        requestBody.referenceImageUrl = referenceImagePath;
+        console.log('参考画像を追加:', referenceImagePath);
+      }
+
       // fal.ai Inpainting APIを呼び出し
       response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          prompt: prompt,
-          negativePrompt: NEGATIVE_PROMPT,
-          imageData: imageData,
-          maskData: maskData,
-          strength: FAL_PARAMS.strength,
-          steps: FAL_PARAMS.steps,
-          guidance: FAL_PARAMS.guidance
-        })
+        body: JSON.stringify(requestBody)
       });
 
       result = await response.json();

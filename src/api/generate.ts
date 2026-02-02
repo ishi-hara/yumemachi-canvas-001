@@ -27,6 +27,7 @@ interface GenerateRequest {
   strength?: number
   steps?: number
   guidance?: number
+  referenceImageUrl?: string  // 参考画像のURL（建物タイプ別）
 }
 
 const generateApi = new Hono<{ Bindings: Bindings }>()
@@ -72,7 +73,8 @@ generateApi.post('/', async (c) => {
       negativePrompt,
       strength = 0.52,
       steps = 35,
-      guidance = 7.0
+      guidance = 7.0,
+      referenceImageUrl
     } = body
 
     // バリデーション
@@ -118,9 +120,26 @@ generateApi.post('/', async (c) => {
     const maskUrl = await uploadBase64Image(maskData, 'image/png')
     console.log('マスク画像アップロード完了:', maskUrl)
 
+    // 参考画像がある場合はアップロード
+    let referenceUrl: string | null = null
+    if (referenceImageUrl) {
+      // 参考画像をfetchしてBase64に変換してアップロード
+      try {
+        const refResponse = await fetch(new URL(referenceImageUrl, c.req.url).toString())
+        if (refResponse.ok) {
+          const refBlob = await refResponse.blob()
+          referenceUrl = await fal.storage.upload(refBlob)
+          console.log('参考画像アップロード完了:', referenceUrl)
+        }
+      } catch (refError) {
+        console.warn('参考画像のアップロードに失敗しました:', refError)
+      }
+    }
+
     console.log('=== fal.ai Inpainting 開始 ===')
     console.log('プロンプト:', prompt)
     console.log('ネガティブプロンプト:', negativePrompt || 'なし')
+    console.log('参考画像:', referenceUrl || 'なし')
     console.log('パラメータ:', { strength, steps, guidance })
 
     // fal.ai Inpainting API入力パラメータを構築
@@ -141,6 +160,11 @@ generateApi.post('/', async (c) => {
     // ※ Inpainting APIが対応していない場合はエラーになる可能性あり
     if (negativePrompt) {
       falInput.negative_prompt = negativePrompt
+    }
+
+    // 参考画像があれば追加（デザイン思想の参照用）
+    if (referenceUrl) {
+      falInput.reference_image_url = referenceUrl
     }
 
     // fal.ai Flux General Inpainting APIを呼び出し
