@@ -169,33 +169,27 @@ generateApi.post('/', async (c) => {
     }
 
     // fal.ai Flux General Inpainting APIを呼び出し
-    // 注意: fal.subscribe はポーリングで多数のサブリクエストを発生させるため、
-    // Cloudflare Workers の制限（50 subrequests）に引っかかる可能性がある
-    // fal.queue.submit + fal.queue.result を使用して制御する
+    // fal.run を使用（同期的に結果を待つ）
     console.log('fal.ai API呼び出し開始...')
     
-    // キューに送信
-    const { request_id } = await fal.queue.submit('fal-ai/flux-general/inpainting', {
+    const result = await fal.run('fal-ai/flux-general/inpainting', {
       input: falInput
-    })
-    console.log('リクエストID:', request_id)
-
-    // 結果を取得（完了まで待機）
-    const result = await fal.queue.result('fal-ai/flux-general/inpainting', {
-      requestId: request_id
     })
 
     console.log('=== Inpainting 完了 ===')
 
     // 生成された画像URLを返す
-    if (result.data && result.data.images && result.data.images.length > 0) {
+    // fal.run の戻り値は { data: {...}, requestId: string } または直接データ
+    const resultData = result.data || result
+    if (resultData && resultData.images && resultData.images.length > 0) {
       return c.json({
         success: true,
-        imageUrl: result.data.images[0].url,
+        imageUrl: resultData.images[0].url,
         prompt: prompt,
         params: { strength, steps, guidance }
       })
     } else {
+      console.error('画像生成結果:', JSON.stringify(result))
       return c.json({
         success: false,
         error: '画像の生成に失敗しました'
