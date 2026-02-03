@@ -159,10 +159,12 @@ generateApi.post('/', async (c) => {
       falInput.negative_prompt = negativePrompt
     }
 
-    // 参考画像があれば追加（デザイン思想の参照用）
-    // fal.aiが公開URLから直接画像を取得
+    // 注意: fal-ai/flux-general/inpainting は reference_image_url をサポートしていない
+    // 参考画像はプロンプトに建物名として反映される（フロントエンドで処理済み）
+    // 将来的に対応するAPIが見つかれば、ここで参考画像URLを追加可能
     if (fullReferenceUrl) {
-      falInput.reference_image_url = fullReferenceUrl
+      console.log('参考画像URL（現在は未使用）:', fullReferenceUrl)
+      // falInput.reference_image_url = fullReferenceUrl  // 未サポートのためコメントアウト
     }
 
     // fal.ai Flux General Inpainting APIを呼び出し
