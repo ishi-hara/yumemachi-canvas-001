@@ -117,12 +117,13 @@ generateApi.post('/', async (c) => {
       credentials: falKey
     })
 
-    // 元画像をアップロード
-    const imageUrl = await uploadBase64Image(imageData, 'image/jpeg')
+    // 元画像とマスク画像を並列でアップロード（サブリクエスト数削減）
+    console.log('画像アップロード開始...')
+    const [imageUrl, maskUrl] = await Promise.all([
+      uploadBase64Image(imageData, 'image/jpeg'),
+      uploadBase64Image(maskData, 'image/png')
+    ])
     console.log('元画像アップロード完了:', imageUrl)
-
-    // マスク画像をアップロード
-    const maskUrl = await uploadBase64Image(maskData, 'image/png')
     console.log('マスク画像アップロード完了:', maskUrl)
 
     // 参考画像がある場合は本番URLに変換
@@ -168,14 +169,20 @@ generateApi.post('/', async (c) => {
     }
 
     // fal.ai Flux General Inpainting APIを呼び出し
-    const result = await fal.subscribe('fal-ai/flux-general/inpainting', {
-      input: falInput,
-      logs: true,
-      onQueueUpdate: (update) => {
-        if (update.status === 'IN_PROGRESS') {
-          console.log('生成中...')
-        }
-      }
+    // 注意: fal.subscribe はポーリングで多数のサブリクエストを発生させるため、
+    // Cloudflare Workers の制限（50 subrequests）に引っかかる可能性がある
+    // fal.queue.submit + fal.queue.result を使用して制御する
+    console.log('fal.ai API呼び出し開始...')
+    
+    // キューに送信
+    const { request_id } = await fal.queue.submit('fal-ai/flux-general/inpainting', {
+      input: falInput
+    })
+    console.log('リクエストID:', request_id)
+
+    // 結果を取得（完了まで待機）
+    const result = await fal.queue.result('fal-ai/flux-general/inpainting', {
+      requestId: request_id
     })
 
     console.log('=== Inpainting 完了 ===')
