@@ -663,3 +663,192 @@ body {
 .checkbox-group.disabled .checkbox-text {
   color: #999;
 }
+
+/* ========================================
+   結果画面の次へボタン
+   ======================================== */
+.next-button {
+  flex: 1;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #7B68EE 0%, #9B89FF 50%, #7B68EE 100%);
+  color: #FFF;
+  box-shadow: 0 4px 15px rgba(123, 104, 238, 0.4);
+}
+
+.next-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(123, 104, 238, 0.5);
+}
+
+/* ========================================
+   設定内容確認画面
+   ======================================== */
+.confirm-content {
+  justify-content: flex-start;
+  padding-top: 40px;
+}
+
+.confirm-image-section {
+  width: 100%;
+  max-width: 350px;
+  margin-bottom: 20px;
+}
+
+.confirm-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #7B68EE;
+  margin-bottom: 8px;
+  text-align: left;
+  padding-left: 4px;
+}
+
+.confirm-image-container {
+  background: #FFF;
+  border-radius: 16px;
+  padding: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.confirm-image {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+}
+
+/* 設定内容表示 */
+.confirm-settings {
+  width: 100%;
+  max-width: 350px;
+  background: #FFF;
+  border-radius: 16px;
+  padding: 16px;
+  margin-top: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.confirm-settings-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #7B68EE;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #E8E0FF;
+}
+
+.confirm-setting-item {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid #F0F0F0;
+}
+
+.confirm-setting-item:last-child {
+  border-bottom: none;
+}
+
+.confirm-setting-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.confirm-setting-value {
+  font-size: 14px;
+  color: #333;
+  word-break: break-word;
+}
+
+/* 設定内容確認画面のボタンエリア */
+.confirm-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 350px;
+  margin-top: 20px;
+}
+
+.save-image-button {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: bold;
+  border: 2px solid #FF6B9D;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #FFF;
+  color: #FF6B9D;
+}
+
+.save-image-button:hover {
+  background: #FFF0F5;
+  transform: translateY(-2px);
+}
+
+.save-and-next-button {
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: bold;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #7B68EE 0%, #9B89FF 50%, #7B68EE 100%);
+  color: #FFF;
+  box-shadow: 0 4px 15px rgba(123, 104, 238, 0.4);
+}
+
+.save-and-next-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(123, 104, 238, 0.5);
+}
+
+/* ========================================
+   仮の完了画面
+   ======================================== */
+.complete-content {
+  justify-content: center;
+  text-align: center;
+}
+
+.complete-message {
+  font-size: 24px;
+  font-weight: bold;
+  color: #7B68EE;
+  margin-bottom: 20px;
+}
+
+.complete-submessage {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.complete-button {
+  padding: 16px 40px;
+  font-size: 18px;
+  font-weight: bold;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 50%, #FFA0C0 100%);
+  color: #FFF;
+  box-shadow: 0 4px 15px rgba(255, 154, 158, 0.4);
+}
+
+.complete-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 154, 158, 0.5);
+}

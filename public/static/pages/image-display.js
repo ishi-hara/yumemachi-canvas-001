@@ -49,6 +49,19 @@ const BUILDING_TYPE_NAMES = {
   'other': ''  // その他は入力値を使用
 };
 
+// 建物別プロンプト（建物タイプごとの詳細指示）
+const BUILDING_PROMPTS = {
+  'fountain': `Install an elegant fountain with water jets in the central plaza area.
+The fountain should have a modern design with multiple water streams.
+Include decorative elements and proper lighting fixtures.`,
+  'merry-go-round': `Install a colorful merry-go-round carousel in the central plaza area.
+The carousel should have classic horses and decorative elements.
+Include ornate canopy and lighting.`,
+  'cafe-stand': `Install a stylish outdoor cafe stand in the central plaza area.
+The cafe should have modern furniture, umbrellas, and attractive display.
+Include seating area for customers.`
+};
+
 // シーンベース（固定：駅前ロータリー用）
 const SCENE_BASE = 'In an existing station-front urban plaza and rotary';
 
@@ -242,10 +255,11 @@ function setupTextValidation(textarea, countDisplay, button) {
 
 /**
  * 生成ボタンの状態更新
+ * 自由文は任意なので、常にボタンを有効にする
  */
 function updateButtonState(textarea, button) {
-  const text = textarea.value.trim();
-  button.disabled = text.length === 0;
+  // 自由文は任意のため、常に有効
+  button.disabled = false;
 }
 
 /**
@@ -308,25 +322,43 @@ function getBuildingTypeName(buildingType, otherValue) {
 }
 
 /**
+ * 建物タイプから建物別プロンプトを取得
+ * @param {string} buildingType - 建物タイプ
+ * @param {string} otherValue - その他の場合の入力値
+ * @returns {string} 建物別プロンプト
+ */
+function getBuildingPrompt(buildingType, otherValue) {
+  if (buildingType === 'other') {
+    // 「その他」の場合：ユーザー入力内容をそのまま建物別プロンプトとして使用
+    if (otherValue && otherValue.trim()) {
+      return otherValue.trim();
+    }
+    return '';
+  }
+  return BUILDING_PROMPTS[buildingType] || '';
+}
+
+/**
  * 画像案選択の変更ハンドラ設定
- * 創造性モード時は自動プロンプトチェックボックスを無効化（グレーアウト）
+ * 生成画像中心モード時は自動プロンプトチェックボックスを無効化（グレーアウト）
  */
 function setupImageModeHandler(modeSelect, autoPromptCheckbox) {
   const checkboxLabel = autoPromptCheckbox.closest('.checkbox-label');
   const checkboxGroup = autoPromptCheckbox.closest('.checkbox-group');
 
   function updateAutoPromptState() {
-    const isCreativeMode = modeSelect.value === 'creative';
+    // 生成画像中心モードの場合のみ自動プロンプトを無効化
+    const isImageCenteredMode = modeSelect.value === 'image-centered';
 
-    if (isCreativeMode) {
-      // 創造性モード: 自動プロンプトを無効化・チェックを外す
+    if (isImageCenteredMode) {
+      // 生成画像中心モード: 自動プロンプトを無効化・チェックを外す
       autoPromptCheckbox.disabled = true;
       autoPromptCheckbox.checked = false;
       if (checkboxGroup) {
         checkboxGroup.classList.add('disabled');
       }
     } else {
-      // 通常モード: 自動プロンプトを有効化
+      // その他のモード: 自動プロンプトを有効化
       autoPromptCheckbox.disabled = false;
       if (checkboxGroup) {
         checkboxGroup.classList.remove('disabled');
@@ -435,27 +467,35 @@ async function handleGenerate(
   // 自由文を取得
   const freeTextValue = freeText.value.trim();
   
-  // 画像案（通常 / 創造性）を取得
+  // 画像案（4つのモード）を取得
   const imageMode = imageModeSelect.value;
-  const isCreativeMode = imageMode === 'creative';
+  // 生成画像中心モードはGPT-Image-1.5を使用
+  const isImageCenteredMode = imageMode === 'image-centered';
   
   // 建物タイプを取得
   const buildingType = buildingTypeSelect.value;
   const otherBuildingValue = otherBuildingInput.value.trim();
   const buildingTypeName = getBuildingTypeName(buildingType, otherBuildingValue);
   
-  // 参考画像を取得（通常モードで、その他以外の場合）
-  const referenceImagePath = !isCreativeMode && buildingType !== 'other' 
+  // 参考画像を取得（生成画像中心以外で、その他以外の場合）
+  const referenceImagePath = !isImageCenteredMode && buildingType !== 'other' 
     ? getRandomReferenceImage(buildingType) 
     : null;
+  
+  // 建物別プロンプトを取得
+  const buildingPrompt = getBuildingPrompt(buildingType, otherBuildingValue);
   
   console.log('=== 建物選択 ===');
   console.log('建物タイプ:', buildingType);
   console.log('建物名（英語）:', buildingTypeName);
   console.log('参考画像:', referenceImagePath || 'なし');
   
-  // 自動プロンプトのON/OFF確認（創造性モードでは無効）
-  const isAutoPromptEnabled = !isCreativeMode && autoPromptCheckbox.checked;
+  // 自動プロンプトのON/OFF確認（生成画像中心モードでは無効）
+  const isAutoPromptEnabled = !isImageCenteredMode && autoPromptCheckbox.checked;
+
+  console.log('=== 生成タイプ ===');
+  console.log('モード:', imageMode);
+  console.log('建物別プロンプト:', buildingPrompt);
 
   // ボタンを無効化
   generateButton.disabled = true;
@@ -470,37 +510,112 @@ async function handleGenerate(
     // プロンプトを構築（自動プロンプトの有無で分岐）
     let prompt;
     
-    if (isAutoPromptEnabled) {
-      // 自動プロンプト ON: GPT-4.1-miniで翻訳・拡張
-      console.log('=== 自動プロンプトモード ===');
-      prompt = await generateAutoPrompt(freeTextValue);
+    // 生成タイプに応じてプロンプトを構築
+    if (imageMode === 'faithful') {
+      // ========================================
+      // 1) 指示に忠実: 現行通りプロンプトに追加
+      // ========================================
+      console.log('=== 指示に忠実モード ===');
+      
+      if (isAutoPromptEnabled) {
+        // 自動プロンプト ON: GPT-4.1-miniで翻訳・拡張
+        prompt = await generateAutoPrompt(freeTextValue);
+        // 建物別プロンプト + 自動生成プロンプト + 自由文
+        prompt = [
+          SCENE_BASE,
+          MODIFICATION_INSTRUCTION,
+          buildingPrompt,
+          STYLE_TAG,
+          LIGHTING_TAG,
+          COMPOSITION_TAG,
+          VISIBILITY_TAG,
+          '',
+          prompt,
+          freeTextValue  // 自由文も追加
+        ].filter(Boolean).join(',\n');
+      } else {
+        // 自動プロンプト OFF: 建物別プロンプト + 自由文
+        prompt = [
+          SCENE_BASE,
+          MODIFICATION_INSTRUCTION,
+          buildingPrompt,
+          STYLE_TAG,
+          LIGHTING_TAG,
+          COMPOSITION_TAG,
+          VISIBILITY_TAG,
+          '',
+          freeTextValue  // 自由文をプロンプトに追加
+        ].filter(Boolean).join(',\n');
+      }
 
-      // ★追加：自動プロンプトにも「人数強制」タグを必ず注入
-      // ★追加：建物名もプロンプトに追加
-      prompt = [
-        SCENE_BASE,
-        MODIFICATION_INSTRUCTION,
-        buildingTypeName ? `Install a ${buildingTypeName} in the central plaza area` : '',
-        STYLE_TAG,
-        LIGHTING_TAG,
-        COMPOSITION_TAG,
-        VISIBILITY_TAG,
-        '',
-        prompt
-      ].filter(Boolean).join(',\n');
+    } else if (imageMode === 'modern' || imageMode === 'creative') {
+      // ========================================
+      // 2) モダン性加味 / 3) 創造性加味:
+      //    入力された場合は、建物別プロンプトの後に追加
+      // ========================================
+      console.log(`=== ${imageMode === 'modern' ? 'モダン性加味' : '創造性加味'}モード ===`);
+      
+      // モード別の追加指示
+      const modeInstruction = imageMode === 'modern'
+        ? 'Apply modern, contemporary design aesthetics. Use clean lines, minimalist forms, and current architectural trends.'
+        : 'Apply creative and imaginative design. Allow artistic expression, unique forms, and innovative concepts while maintaining realism.';
+      
+      if (isAutoPromptEnabled) {
+        // 自動プロンプト ON: GPT-4.1-miniで翻訳・拡張
+        prompt = await generateAutoPrompt(freeTextValue);
+        // 建物別プロンプト + モード指示 + 自動生成プロンプト + 自由文（入力された場合）
+        const parts = [
+          SCENE_BASE,
+          MODIFICATION_INSTRUCTION,
+          buildingPrompt,
+          modeInstruction,
+          STYLE_TAG,
+          LIGHTING_TAG,
+          COMPOSITION_TAG,
+          VISIBILITY_TAG,
+          '',
+          prompt
+        ];
+        // 自由文が入力されている場合は建物別プロンプトの後に追加
+        if (freeTextValue) {
+          parts.push(freeTextValue);
+        }
+        prompt = parts.filter(Boolean).join(',\n');
+      } else {
+        // 自動プロンプト OFF: 建物別プロンプト + モード指示 + 自由文（入力された場合）
+        const parts = [
+          SCENE_BASE,
+          MODIFICATION_INSTRUCTION,
+          buildingPrompt,
+          modeInstruction,
+          STYLE_TAG,
+          LIGHTING_TAG,
+          COMPOSITION_TAG,
+          VISIBILITY_TAG
+        ];
+        // 自由文が入力されている場合は建物別プロンプトの後に追加
+        if (freeTextValue) {
+          parts.push('');
+          parts.push(freeTextValue);
+        }
+        prompt = parts.filter(Boolean).join(',\n');
+      }
 
     } else {
-      // 自動プロンプト OFF: 従来通りの固定プロンプト + 日本語自由文
-      console.log('=== 通常モード ===');
-      // ★追加：建物名をプロンプトに追加
-      const buildingInstruction = buildingTypeName 
-        ? `Install a ${buildingTypeName} in the central plaza area` 
-        : '';
-      prompt = buildPromptWithBuilding(freeTextValue, buildingInstruction);
+      // ========================================
+      // 4) 生成画像中心: 現行通り User request: として追加
+      //    （GPT-Image-1.5で処理するため、ここではプロンプトのみ構築）
+      // ========================================
+      console.log('=== 生成画像中心モード ===');
+      // このモードはisImageCenteredMode=trueで後続処理で分岐
+      prompt = freeTextValue;
     }
 
-    console.log('=== 画像生成パラメータ（Inpainting） ===');
+    console.log('=== 画像生成パラメータ ===');
+    console.log('生成タイプ:', imageMode);
     console.log('自動プロンプト:', isAutoPromptEnabled ? 'ON' : 'OFF');
+    console.log('建物タイプ:', buildingType);
+    console.log('建物別プロンプト:', buildingPrompt);
     console.log('スタイル: 写真風（固定）');
     console.log('ライティング: 自然光（固定）');
     console.log('構図: 全体像（固定）');
@@ -508,20 +623,31 @@ async function handleGenerate(
     console.log('ネガティブプロンプト:', NEGATIVE_PROMPT);
     console.log('パラメータ:', FAL_PARAMS);
 
+    // 生成モード名の日本語マッピング
+    const imageModeNames = {
+      'faithful': '指示に忠実',
+      'modern': 'モダン性加味',
+      'creative': '創造性加味',
+      'image-centered': '生成画像中心'
+    };
+
     // 生成データをセッションストレージに保存
     const generationData = {
       prompt: prompt,
-      negativePrompt: isCreativeMode ? null : NEGATIVE_PROMPT,
+      negativePrompt: isImageCenteredMode ? null : NEGATIVE_PROMPT,
       baseImageUrl: BASE_IMAGE_PATH,
-      maskImageUrl: isCreativeMode ? null : MASK_IMAGE_PATH,
-      params: isCreativeMode ? null : FAL_PARAMS,
+      maskImageUrl: isImageCenteredMode ? null : MASK_IMAGE_PATH,
+      params: isImageCenteredMode ? null : FAL_PARAMS,
       options: {
-        style: isCreativeMode ? '創造性' : '写真風',
-        lighting: isCreativeMode ? '自動' : '自然光',
-        composition: isCreativeMode ? '自動' : '全体像',
+        style: isImageCenteredMode ? '自動' : '写真風',
+        lighting: isImageCenteredMode ? '自動' : '自然光',
+        composition: isImageCenteredMode ? '自動' : '全体像',
         freeText: freeTextValue,
         autoPrompt: isAutoPromptEnabled,
-        imageMode: imageMode
+        imageMode: imageMode,
+        imageModeName: imageModeNames[imageMode] || imageMode,
+        buildingType: buildingType,
+        buildingPrompt: buildingPrompt
       }
     };
     sessionStorage.setItem('generationData', JSON.stringify(generationData));
@@ -529,19 +655,20 @@ async function handleGenerate(
     let response;
     let result;
 
-    if (isCreativeMode) {
+    if (isImageCenteredMode) {
       // ========================================
-      // 創造性モード: GPT-Image-1.5 (images/generations)
+      // 4) 生成画像中心モード: GPT-Image-1.5 (images/generations)
+      //    現行通り User request: として追加
       // ========================================
-      console.log('=== 創造性モード: GPT-Image-1.5 ===');
+      console.log('=== 生成画像中心モード: GPT-Image-1.5 ===');
       console.log('ユーザー入力:', freeTextValue);
 
-      // 創造性モード用の詳細プロンプト（建物名を追加）
-      const buildingLine = buildingTypeName 
-        ? `\nInstallation type: ${buildingTypeName}` 
+      // 建物別プロンプトを含める
+      const buildingLine = buildingPrompt 
+        ? `\n\nBuilding specification:\n${buildingPrompt}` 
         : '';
       
-      const creativePrompt = `Preserve all existing background elements exactly as they are, including station buildings, surrounding roads, sidewalks, trees, sky, lighting, perspective, and camera angle.
+      const imageCenteredPrompt = `Preserve all existing background elements exactly as they are, including station buildings, surrounding roads, sidewalks, trees, sky, lighting, perspective, and camera angle.
 Do not modify, replace, stylize, reinterpret, or regenerate any background structures or environment outside the central circular plaza area.
 
 Replace ONLY the central circular plaza area with a highly creative, non-traditional public-space installation.
@@ -565,7 +692,7 @@ Ensure seamless blending at the boundary between the modified central plaza and 
 Output a single, cohesive, high-resolution photorealistic image.
 
 User request: ${freeTextValue}`;
-      console.log('最終プロンプト:', creativePrompt);
+      console.log('最終プロンプト:', imageCenteredPrompt);
 
       response = await fetch('/api/creative', {
         method: 'POST',
@@ -573,7 +700,7 @@ User request: ${freeTextValue}`;
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          prompt: creativePrompt
+          prompt: imageCenteredPrompt
         })
       });
 

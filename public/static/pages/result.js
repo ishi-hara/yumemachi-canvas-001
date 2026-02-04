@@ -2,7 +2,7 @@
  * 結果画面用JavaScript
  * - 生成画像の表示
  * - 戻るボタン処理
- * - もう一度生成ボタン処理
+ * - 次へボタン処理（設定内容確認画面へ遷移）
  */
 
 // ========================================
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 要素の取得
   const generatedImage = document.getElementById('generatedImage');
   const backButton = document.getElementById('backButton');
-  const retryButton = document.getElementById('retryButton');
+  const nextButton = document.getElementById('nextButton');
 
   // セッションストレージから生成データを取得
   const generationData = getGenerationData();
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   displayGeneratedImage(generatedImage, generationData);
 
   // ボタンイベント設定
-  setupButtons(backButton, retryButton);
+  setupButtons(backButton, nextButton);
 });
 
 // ========================================
@@ -169,21 +169,19 @@ function showErrorState(imageElement, generationData) {
 /**
  * ボタンのイベント設定
  * @param {HTMLButtonElement} backButton - 戻るボタン
- * @param {HTMLButtonElement} retryButton - もう一度生成ボタン
+ * @param {HTMLButtonElement} nextButton - 次へボタン
  */
-function setupButtons(backButton, retryButton) {
-  // 戻るボタン：トップ画面へ
+function setupButtons(backButton, nextButton) {
+  // 戻るボタン：画像表示画面へ戻る
   backButton.addEventListener('click', () => {
-    // セッションストレージをクリア
-    sessionStorage.removeItem('generationData');
-    sessionStorage.removeItem('generatedImageUrl');
-    window.location.href = '/';
-  });
-
-  // もう一度生成ボタン：画像表示画面へ戻る
-  retryButton.addEventListener('click', () => {
     // 生成画像URLのみクリア
     sessionStorage.removeItem('generatedImageUrl');
     window.location.href = '/image-display';
+  });
+
+  // 次へボタン：設定内容確認画面へ遷移
+  nextButton.addEventListener('click', () => {
+    // セッションストレージのデータは保持したまま遷移
+    window.location.href = '/confirm';
   });
 }

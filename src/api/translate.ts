@@ -97,13 +97,9 @@ translateApi.post('/', async (c) => {
     const body: TranslateRequest = await c.req.json()
     const { text } = body
 
-    // バリデーション
-    if (!text || text.trim().length === 0) {
-      return c.json({
-        success: false,
-        error: 'テキストは必須です'
-      }, 400)
-    }
+    // 空テキストの場合はデフォルトのプロンプトを使用
+    const DEFAULT_PROMPT = '駅前広場に人々が集まる賑やかで楽しい雰囲気'
+    const inputText = (text && text.trim().length > 0) ? text.trim() : DEFAULT_PROMPT
 
     // OpenAI APIキーの確認
     const apiKey = c.env.OPENAI_API_KEY
@@ -115,7 +111,8 @@ translateApi.post('/', async (c) => {
     }
 
     console.log('=== GPT-4.1-mini プロンプト生成開始 ===')
-    console.log('入力テキスト:', text)
+    console.log('入力テキスト:', inputText)
+    console.log('デフォルト使用:', text !== inputText)
 
     // OpenAI API呼び出し
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -133,7 +130,7 @@ translateApi.post('/', async (c) => {
           },
           {
             role: 'user',
-            content: text
+            content: inputText
           }
         ],
         temperature: 0.1
